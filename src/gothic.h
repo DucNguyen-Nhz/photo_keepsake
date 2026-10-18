@@ -1,6 +1,6 @@
 #pragma once
 // Romantic Dracula theme: a love-letter grimoire instead of a wallet, gilded frames
-// with candles instead of plastic sleeves, rose petals and bats instead of dust.
+// instead of plastic sleeves, rose petals and bats instead of dust.
 #include "content.h"
 #include "photo.h"
 #include "raylib.h"
@@ -12,8 +12,6 @@ struct TomeArt {
 TomeArt BakeTome(const Config& cfg, const Font& title, const Font& script);
 SleeveArt BakeFrame(const Item& item, const Font& note, float aging, int seed);
 
-// Wick tip of the candle on a frame, as surface coordinates (s,t) of the sleeve.
-Vector2 FrameWickST();
 // Wick tip of the candlestick on the open page, in window coordinates.
 Vector2 PageWick(int side);
 

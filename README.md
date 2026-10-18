@@ -15,7 +15,7 @@ Two themes (pick one in `wallet.ini`, see below):
 |---------------------------------------------------------------|-------------------------------------------------|
 | Dracula's love-letter book: burgundy leather, gold tooling, rose and bat-wing emblem | Worn leather wartime wallet |
 | Opens on Hayez's *The Kiss* in an oval gilt frame; a love letter and pressed rose on the page | Dust drifts out as it opens |
-| Photos hang in gilded frames on chains, each lit by a flickering candle | Photos in a plastic accordion insert |
+| Photos hang in gilded frames on chains, in flickering candlelight | Photos in a plastic accordion insert |
 | Warm rose-sepia candlelit grade; rose petals drift down         | Sepia print with a fold crease                  |
 | Notes on parchment pinned to the frame back, red ink, rose wax seal | Notes handwritten on the back of the print |
 

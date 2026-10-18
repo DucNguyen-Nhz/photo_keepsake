@@ -269,7 +269,6 @@ RenderTexture2D BakePage(const Config& cfg, const Font& title, const Font& scrip
 
 // --- frames ---------------------------------------------------------------
 Rectangle FrameRect() { return {P, P + TAB, W, H}; }
-constexpr float kCandleX = P + W - 40, kCandleBase = P + TAB + H - 8;
 
 void Chains() {
     for (float fx : {0.2f, 0.8f}) {
@@ -308,7 +307,6 @@ RenderTexture2D BakeFrameFront(const Item& item, float aging, float seed) {
         DrawCircleV(c, 4.0f, Color{196, 158, 80, 255});
         DrawCircleV(c, 1.8f, Color{110, 26, 30, 255});
     }
-    DrawCandleStub(kCandleX, kCandleBase, 9.0f, 24.0f, (unsigned)(seed * 1000));
     unsigned us = (unsigned)(seed * 1000);
     Rng rng{us};
     DrawDust(f, us + 1, 150, true);
@@ -360,11 +358,6 @@ TomeArt BakeTome(const Config& cfg, const Font& title, const Font& script) {
 SleeveArt BakeFrame(const Item& item, const Font& note, float aging, int seed) {
     float fs = 1.7f + seed * 3.13f;
     return {BakeFrameFront(item, aging, fs), BakeFrameBack(item, note, aging, fs, seed)};
-}
-
-Vector2 FrameWickST() {
-    float tipY = kCandleBase - 24.0f - 3.5f;
-    return {(kCandleX + 0.4f) / kTexW, tipY / kTexH};
 }
 
 Vector2 PageWick(int side) {

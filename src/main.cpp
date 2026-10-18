@@ -464,16 +464,10 @@ void App::Draw() {
             DrawSleeve(g, sleeves_[i].art, gloss_.texture, ShadeTint(g.shade));
             continue;
         }
-        // candlelight: warm, flickering
+        // lit by the page candle: warm, flickering
         float v = g.shade * (0.94f + 0.06f * CandleFlicker(time_, i * 2.7f));
         auto c = [](float x) { return (unsigned char)std::clamp(x * 255.0f, 0.0f, 255.0f); };
         DrawSleeve(g, sleeves_[i].art, Texture2D{}, Color{c(v), c(v * 0.93f), c(v * 0.84f), 255});
-        float lit = std::clamp((sleeves_[i].drop.x - 0.8f) * 6.0f, 0.0f, 1.0f);
-        if (g.front && sleeves_[i].flip.x < 0.2f && lit > 0.0f) {
-            Vector2 st = FrameWickST();
-            DrawCandleFlame(g.pj(g.f(st.x, st.y)), 0.85f, time_, i * 2.7f, lit);
-            BeginPremulBlend();
-        }
     }
     walletHits_ = DrawWallet(wallet_, wp);
     if (gothic) {
