@@ -1,5 +1,6 @@
 #include "anim.h"
 #include "content.h"
+#include "gothic.h"
 #include "layout.h"
 #include "photo.h"
 #include "render.h"
@@ -74,8 +75,10 @@ private:
     void Undock();
 
     Content content_;
-    Font font_{};
-    bool ownFont_ = false;
+    Theme theme_ = Theme::Dracula;
+    Font font_{};        // notes
+    Font titleFont_{};   // cover lettering
+    bool ownFont_ = false, ownTitle_ = false;
     WalletArt wallet_;
     RenderTexture2D gloss_{};
     std::vector<Sleeve> sleeves_;
@@ -93,6 +96,7 @@ private:
     int maxOpen_ = 1;
     float time_ = 0.0f;
     Dust dust_;
+    Bats bats_;
     bool dustDone_ = false;
 
     bool pressing_ = false, dragging_ = false;
@@ -104,10 +108,7 @@ private:
     bool quit_ = false;
 };
 
-Font LoadHandwriting(const Content& c, bool& owned) {
-    std::string path = c.cfg.fontPath.empty()
-                           ? AssetDir() + "fonts/PatrickHand-Regular.ttf"
-                           : c.cfg.fontPath;
+Font LoadFontFor(const Content& c, const std::string& path, bool& owned) {
     std::string all;
     for (int ch = 32; ch < 127; ch++) all += (char)ch;
     for (const auto& it : c.items) all += it.note;
@@ -122,7 +123,7 @@ Font LoadHandwriting(const Content& c, bool& owned) {
     if (FileExists(path.c_str())) f = LoadFontEx(path.c_str(), 64, list.data(), (int)list.size());
     owned = f.texture.id != 0;
     if (!owned) {
-        TraceLog(LOG_WARNING, "Handwriting font not found (%s), using default", path.c_str());
+        TraceLog(LOG_WARNING, "Font not found (%s), using default", path.c_str());
         return GetFontDefault();
     }
     GenTextureMipmaps(&f.texture);
@@ -158,18 +159,26 @@ bool App::Init(int argc, char** argv) {
         st = {content_.cfg.x, content_.cfg.y, 0};
     }
     SetWindowPosition(st.x, st.y);
+    dock_ = 0;
     if (st.dock != 0) {
         DockTo(st.dock, {(float)st.x, (float)st.y});
         slide_.x = slide_.target = HiddenOffset();
     }
 
     InitRender();
-    font_ = LoadHandwriting(content_, ownFont_);
-    wallet_ = BakeWallet(content_.cfg, font_);
-    gloss_ = BakeGloss();
+    theme_ = content_.cfg.theme;
+    bool gothic = theme_ == Theme::Dracula;
+    std::string fonts = AssetDir() + "fonts/";
+    std::string notePath = !content_.cfg.fontPath.empty() ? content_.cfg.fontPath
+                           : gothic ? fonts + "CormorantGaramond-Italic.ttf"
+                                    : fonts + "PatrickHand-Regular.ttf";
+    font_ = LoadFontFor(content_, notePath, ownFont_);
+    titleFont_ = gothic ? LoadFontFor(content_, fonts + "GrenzeGotisch.ttf", ownTitle_) : font_;
+    wallet_ = BakeWallet(content_.cfg, titleFont_);
+    if (!gothic) gloss_ = BakeGloss();
     sleeves_.resize(n);
     for (int i = 0; i < n; i++)
-        sleeves_[i].art = BakeSleeve(content_.items[i], font_, content_.cfg.aging, i + 1);
+        sleeves_[i].art = BakeSleeve(content_.items[i], font_, content_.cfg.aging, i + 1, theme_);
 
     if (content_.startOpen > 0) {
         wantOpen_ = true;
@@ -188,9 +197,10 @@ void App::Shutdown() {
     Vector2 p = GetWindowPosition();
     SaveState({(int)p.x, (int)p.y, dock_});
     for (auto& s : sleeves_) UnloadSleeve(s.art);
-    UnloadRenderTexture(gloss_);
+    if (gloss_.id != 0) UnloadRenderTexture(gloss_);
     UnloadWallet(wallet_);
     if (ownFont_) UnloadFont(font_);
+    if (ownTitle_) UnloadFont(titleFont_);
     ShutdownRender();
     CloseWindow();
 }
@@ -396,6 +406,10 @@ void App::Update(float dt) {
         s.drop.Update(dt);
         s.flip.Update(dt);
     }
+    if (wantOpen_ && !dustDone_ && cover_.x > 0.3f && theme_ == Theme::Dracula) {
+        bats_.Burst({PanelX0(side_) + L::kWalletW * 0.5f, L::kTop + L::kWalletH * 0.4f}, 7);
+        dustDone_ = true;
+    }
     if (wantOpen_ && !dustDone_ && cover_.x > 0.3f) {
         dust_.Burst({L::kHingeX, L::kTop + 6}, {L::kHingeX, L::kTop + L::kWalletH - 6}, 34);
         float px = PanelX0(side_);
@@ -405,6 +419,7 @@ void App::Update(float dt) {
     }
     if (!wantOpen_ && cover_.x < 0.05f) dustDone_ = false;
     dust_.Update(dt);
+    bats_.Update(dt);
 }
 
 void App::Draw() {
@@ -425,11 +440,32 @@ void App::Draw() {
     DrawWalletShadow(wp);
 
     BeginPremulBlend();
-    for (int i = (int)geoms_.size() - 1; i >= 0; i--) DrawSleeve(geoms_[i], sleeves_[i].art, gloss_.texture);
+    bool gothic = theme_ == Theme::Dracula;
+    for (int i = (int)geoms_.size() - 1; i >= 0; i--) {
+        const SleeveGeom& g = geoms_[i];
+        if (!gothic) {
+            DrawSleeve(g, sleeves_[i].art, gloss_.texture, ShadeTint(g.shade));
+            continue;
+        }
+        // candlelight: warm, flickering
+        float v = g.shade * (0.94f + 0.06f * CandleFlicker(time_, i * 2.7f));
+        auto c = [](float x) { return (unsigned char)std::clamp(x * 255.0f, 0.0f, 255.0f); };
+        DrawSleeve(g, sleeves_[i].art, Texture2D{}, Color{c(v), c(v * 0.93f), c(v * 0.84f), 255});
+        float lit = std::clamp((sleeves_[i].drop.x - 0.8f) * 6.0f, 0.0f, 1.0f);
+        if (g.front && sleeves_[i].flip.x < 0.2f && lit > 0.0f) {
+            Vector2 st = FrameWickST();
+            DrawCandleFlame(g.pj(g.f(st.x, st.y)), 0.85f, time_, i * 2.7f, lit);
+            BeginPremulBlend();
+        }
+    }
     walletHits_ = DrawWallet(wallet_, wp);
+    if (gothic && cover_.x > 0.5f) {
+        DrawCandleFlame(PageWick(side_), 1.0f, time_, 0.9f, std::clamp((cover_.x - 0.5f) * 2.5f, 0.0f, 1.0f));
+    }
 
     BeginStraightBlend();
     dust_.Draw();
+    bats_.Draw();
     rlDrawRenderBatchActive();
     rlPopMatrix();
     if (menuOpen_) DrawMenu();

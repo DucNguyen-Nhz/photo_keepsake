@@ -26,11 +26,12 @@ using SurfaceFn = std::function<Vec3(float s, float t)>;
 // The window framebuffer is kept premultiplied so the compositor blends it correctly.
 void BeginStraightBlend();   // for ordinary (straight-alpha) draws: shapes, text, image textures
 void BeginPremulBlend();     // for baked render textures, which are premultiplied
+void BeginAdditiveBlend();   // light: adds straight-alpha color (glows, flames)
 
 void InitRender();
 void ShutdownRender();
 
-enum class ShaderId { Leather, Paper, Photo, Gloss };
+enum class ShaderId { Leather, Paper, Photo, Gloss, Gilt };
 Shader GetShader(ShaderId id);
 void SetUniform(Shader sh, const char* name, float v);
 void SetUniform(Shader sh, const char* name, Vector2 v);
@@ -42,6 +43,12 @@ RenderTexture2D BakeBegin(float w, float h);
 void BakeEnd(RenderTexture2D& rt);
 // Fill `r` with a procedural shader; `size` uniform is set to the pixel size.
 void FillShaderRect(Shader sh, Rectangle r);
+void FillLeather(Rectangle r, float seed, Vector3 base, float radius, float wear);
+void FillPaper(Rectangle r, float seed, Vector3 base, float radius, float wear, float rough = 1.5f);
+// Gilded moulding of width `border` around the edge of `r`.
+void FillGilt(Rectangle r, float border, float seed);
+// Photo cropped to fill `dst`; style 0 = sepia keepsake, 1 = cold gothic oil portrait.
+void DrawAgedPhoto(Texture2D img, Rectangle dst, float seed, float aging, float style);
 
 Quad ProjectSurface(const Projector& pj, const SurfaceFn& f);
 // Draw a premultiplied texture mapped onto a 3D surface, subdivided for perspective.

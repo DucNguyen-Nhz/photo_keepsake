@@ -111,7 +111,8 @@ Content LoadContent(int argc, char** argv) {
     }
 
     for (auto& [k, v] : ReadIni(c.dir + "/wallet.ini")) {
-        if (k == "aging") c.cfg.aging = std::clamp((float)std::atof(v.c_str()), 0.0f, 1.0f);
+        if (k == "theme") c.cfg.theme = v == "wallet" ? Theme::Wallet : Theme::Dracula;
+        else if (k == "aging") c.cfg.aging = std::clamp((float)std::atof(v.c_str()), 0.0f, 1.0f);
         else if (k == "initials") c.cfg.initials = v;
         else if (k == "font") c.cfg.fontPath = v.empty() || v[0] == '/' ? v : c.dir + "/" + v;
         else if (k == "x") c.cfg.x = std::atoi(v.c_str());

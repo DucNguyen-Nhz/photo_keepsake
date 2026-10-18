@@ -20,7 +20,8 @@ struct WalletHits {
     Quad panel;
 };
 
-WalletArt BakeWallet(const Config& cfg, const Font& font);
+// `title` is used for lettering on the cover (theme dependent).
+WalletArt BakeWallet(const Config& cfg, const Font& title);
 void UnloadWallet(WalletArt& art);
 
 void DrawWalletShadow(const WalletPose& pose);

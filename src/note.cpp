@@ -42,7 +42,7 @@ std::vector<std::string> Wrap(const std::string& text, const Font& font, float s
 }
 }  // namespace
 
-void DrawNote(Rectangle area, const std::string& text, const Font& font, int seed) {
+void DrawNote(Rectangle area, const std::string& text, const Font& font, int seed, Color ink) {
     if (text.empty()) return;
     float size = 19.0f;
     std::vector<std::string> lines;
@@ -59,10 +59,10 @@ void DrawNote(Rectangle area, const std::string& text, const Font& font, int see
     for (size_t i = 0; i < lines.size(); i++) {
         Vector2 pos = {area.x + rng.Range(0.0f, 4.0f), area.y + i * lineH + rng.Range(-0.8f, 0.8f)};
         float rot = slope + rng.Range(-0.9f, 0.9f);
-        unsigned char a = (unsigned char)rng.Range(185, 225);
+        unsigned char a = (unsigned char)(ink.a * rng.Range(0.86f, 1.0f));
         // faint bleed, then the stroke
         DrawTextPro(font, lines[i].c_str(), {pos.x + 0.35f, pos.y + 0.3f}, {0, 0}, rot, size, 0,
-                    Color{40, 46, 96, (unsigned char)(a / 4)});
-        DrawTextPro(font, lines[i].c_str(), pos, {0, 0}, rot, size, 0, Color{34, 40, 88, a});
+                    Color{ink.r, ink.g, ink.b, (unsigned char)(a / 4)});
+        DrawTextPro(font, lines[i].c_str(), pos, {0, 0}, rot, size, 0, Color{ink.r, ink.g, ink.b, a});
     }
 }

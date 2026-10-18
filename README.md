@@ -9,6 +9,16 @@ the handwritten note on the back.
 - Clicks on empty space go straight through to whatever is underneath.
 - Leather, paper and the aged-photo look are generated on the fly; your photos are untouched.
 
+Two themes (pick one in `wallet.ini`, see below):
+
+| `theme=dracula` (default)                                     | `theme=wallet`                                  |
+|---------------------------------------------------------------|-------------------------------------------------|
+| Dracula's grimoire: crimson leather, gold tooling, bat emblem | Worn leather wartime wallet                     |
+| Opens on a castle under a full moon; bats fly out             | Dust drifts out as it opens                     |
+| Photos hang in gilded frames on iron chains, each lit by a flickering candle | Photos in a plastic accordion insert |
+| Cold oil-portrait grade with fine craquelure                  | Sepia print with a fold crease                  |
+| Notes on parchment pinned to the frame back, red ink, wax seal | Notes handwritten on the back of the print     |
+
 Written in C++17 with [raylib](https://www.raylib.com/) 5.5.
 
 ---
@@ -69,7 +79,7 @@ items/
 ```
 
 Notes are plain UTF-8 text. Line breaks are kept and long notes shrink to fit; accented and
-Vietnamese characters work. Photos are cropped to a landscape frame (portraits keep the top part).
+Vietnamese characters work with both themes' fonts. Photos are cropped to a landscape frame (portraits keep the top part).
 
 **Restart the app after changing photos** (they're loaded at start).
 
@@ -80,9 +90,10 @@ If the folder is empty, the wallet shows three sample photos.
 Optional, in the same folder:
 
 ```ini
-initials=E. M.     # pressed into the leather cover
+theme=dracula      # dracula (default) or wallet
+initials=E. M.     # pressed into the cover (dracula: replaces the "Dracula" title)
 aging=0.9          # 0 = fresh print, 1 = very worn
-font=myhand.ttf    # your own handwriting font (.ttf, placed in the same folder)
+font=myhand.ttf    # your own font for the notes (.ttf, placed in the same folder)
 ```
 
 ---
@@ -150,10 +161,12 @@ CMakeLists.txt          build (fetches raylib 5.5; makes a .app on macOS)
 cmake/Info.plist.in     macOS bundle info (no Dock icon)
 scripts/setup-macos.sh  macOS build + install
 src/                    C++ sources (window, animation, wallet, photos, notes)
-assets/shaders/         leather, paper, aged-photo and gloss shaders
-assets/fonts/           Patrick Hand handwriting font (SIL OFL, see OFL.txt)
+src/gothic.cpp          Dracula theme: grimoire, gilded frames, candles, bats
+assets/shaders/         leather, paper, aged-photo, gloss and gilt shaders
+assets/fonts/           Patrick Hand, Grenze Gotisch, Cormorant Garamond (all SIL OFL)
 assets/samples/         sample photos and notes
 ```
 
-Credits: sample photos from Unsplash via picsum.photos; handwriting font Patrick Hand by Patrick
-Wagesreiter (SIL Open Font License).
+Credits: sample photos from Unsplash via picsum.photos. Fonts under the SIL Open Font License:
+Patrick Hand (Patrick Wagesreiter), Grenze Gotisch (Omnibus-Type), Cormorant Garamond
+(Christian Thalmann); licence texts in `assets/fonts/`.

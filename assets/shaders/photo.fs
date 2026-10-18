@@ -26,6 +26,20 @@ uniform vec4 srcRect;     // normalized crop region of texture0
 uniform vec2 size;        // output size in pixels
 uniform float seed;
 uniform float aging;
+uniform float style;      // 0 sepia keepsake, 1 cold gothic portrait
+
+float cracks(vec2 x) {    // craquelure: distance to the nearest cell border
+    vec2 n = floor(x), f = fract(x);
+    float d1 = 8.0, d2 = 8.0;
+    for (int j = -1; j <= 1; j++)
+        for (int i = -1; i <= 1; i++) {
+            vec2 g = vec2(i, j);
+            vec2 r = g + hash2(n + g) - f;
+            float d = dot(r, r);
+            if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) { d2 = d; }
+        }
+    return sqrt(d2) - sqrt(d1);
+}
 
 void main() {
     vec2 uv = (fragTexCoord - srcRect.xy) / srcRect.zw;
@@ -33,6 +47,19 @@ void main() {
     vec3 c = texture(texture0, fragTexCoord).rgb;
 
     float l = dot(c, vec3(0.299, 0.587, 0.114));
+    if (style > 0.5) {
+        vec3 g = mix(vec3(l), c, 0.22) * vec3(0.90, 0.94, 1.04);              // drained, cold
+        g = mix(g, g * vec3(1.18, 0.82, 0.80), smoothstep(0.45, 1.0, l) * 0.45); // crimson highlights
+        g = mix(vec3(0.05, 0.04, 0.06), g, 0.92);
+        float v = 1.0 - smoothstep(0.25, 0.85, length((uv - 0.5) * vec2(1.0, 1.15)));
+        g *= mix(1.0, 0.35 + 0.65 * v, aging);
+        vec2 px = uv * size;
+        g += (hash(floor(px) + o) - 0.5) * 0.06 * aging;
+        float cr = 1.0 - smoothstep(0.0, 0.03, cracks(uv * vec2(22.0, 16.0) + o));
+        g *= 1.0 - cr * 0.22 * aging;
+        finalColor = vec4(clamp(g, 0.0, 1.0), 1.0) * fragColor;
+        return;
+    }
     vec3 sep = vec3(l) * vec3(1.08, 0.95, 0.76) + vec3(0.03, 0.015, -0.01);
     sep = mix(vec3(0.42, 0.37, 0.29), sep, 0.86);                  // lifted blacks
     c = mix(c, sep, clamp(0.2 + 0.75 * aging, 0.0, 1.0));

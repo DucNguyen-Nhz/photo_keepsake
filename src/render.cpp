@@ -8,7 +8,7 @@
 
 namespace {
 Texture2D gWhite;
-Shader gShaders[4];
+Shader gShaders[5];
 
 std::vector<Vector2> RoundRectPath(Rectangle r, float rad, int seg) {
     std::vector<Vector2> pts;
@@ -76,14 +76,20 @@ void BeginPremulBlend() {
     rlSetBlendMode(RL_BLEND_CUSTOM_SEPARATE);
 }
 
+void BeginAdditiveBlend() {
+    rlDrawRenderBatchActive();
+    rlSetBlendFactorsSeparate(RL_SRC_ALPHA, RL_ONE, RL_ONE, RL_ONE, RL_FUNC_ADD, RL_FUNC_ADD);
+    rlSetBlendMode(RL_BLEND_CUSTOM_SEPARATE);
+}
+
 void InitRender() {
     Image img = GenImageColor(1, 1, WHITE);
     gWhite = LoadTextureFromImage(img);
     UnloadImage(img);
 
     std::string dir = AssetDir() + "shaders/";
-    const char* names[4] = {"leather.fs", "paper.fs", "photo.fs", "gloss.fs"};
-    for (int i = 0; i < 4; i++) {
+    const char* names[5] = {"leather.fs", "paper.fs", "photo.fs", "gloss.fs", "gilt.fs"};
+    for (int i = 0; i < 5; i++) {
         gShaders[i] = LoadShader(nullptr, (dir + names[i]).c_str());
     }
     rlDisableBackfaceCulling();
@@ -132,6 +138,54 @@ void FillShaderRect(Shader sh, Rectangle r) {
     SetUniform(sh, "size", Vector2{r.width * L::kBakeScale, r.height * L::kBakeScale});
     BeginShaderMode(sh);
     DrawTexturePro(gWhite, {0, 0, 1, 1}, r, {0, 0}, 0.0f, WHITE);
+    EndShaderMode();
+}
+
+void FillLeather(Rectangle r, float seed, Vector3 base, float radius, float wear) {
+    Shader sh = GetShader(ShaderId::Leather);
+    SetUniform(sh, "seed", seed);
+    SetUniform(sh, "base", base);
+    SetUniform(sh, "radius", radius * L::kBakeScale);
+    SetUniform(sh, "wear", wear);
+    FillShaderRect(sh, r);
+}
+
+void FillPaper(Rectangle r, float seed, Vector3 base, float radius, float wear, float rough) {
+    Shader sh = GetShader(ShaderId::Paper);
+    SetUniform(sh, "seed", seed);
+    SetUniform(sh, "base", base);
+    SetUniform(sh, "radius", radius * L::kBakeScale);
+    SetUniform(sh, "wear", wear);
+    SetUniform(sh, "rough", rough * L::kBakeScale);
+    FillShaderRect(sh, r);
+}
+
+void FillGilt(Rectangle r, float border, float seed) {
+    Shader sh = GetShader(ShaderId::Gilt);
+    SetUniform(sh, "border", border * L::kBakeScale);
+    SetUniform(sh, "seed", seed);
+    FillShaderRect(sh, r);
+}
+
+void DrawAgedPhoto(Texture2D img, Rectangle dst, float seed, float aging, float style) {
+    float iw = (float)img.width, ih = (float)img.height;
+    float want = dst.width / dst.height;
+    Rectangle src = {0, 0, iw, ih};
+    if (iw / ih > want) {
+        src.width = ih * want;
+        src.x = (iw - src.width) * 0.5f;
+    } else {
+        src.height = iw / want;
+        src.y = (ih - src.height) * 0.3f;   // keep faces in portraits
+    }
+    Shader sh = GetShader(ShaderId::Photo);
+    SetUniform(sh, "srcRect", Vector4{src.x / iw, src.y / ih, src.width / iw, src.height / ih});
+    SetUniform(sh, "size", Vector2{dst.width * L::kBakeScale, dst.height * L::kBakeScale});
+    SetUniform(sh, "seed", seed);
+    SetUniform(sh, "aging", aging);
+    SetUniform(sh, "style", style);
+    BeginShaderMode(sh);
+    DrawTexturePro(img, src, dst, {0, 0}, 0.0f, WHITE);
     EndShaderMode();
 }
 

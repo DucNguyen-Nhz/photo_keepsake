@@ -1,4 +1,5 @@
 #include "photo.h"
+#include "gothic.h"
 #include "layout.h"
 #include "note.h"
 #include <algorithm>
@@ -31,13 +32,7 @@ void PlasticOverlay() {
 }
 
 void FillCard(Rectangle r, float seed, Vector3 base, float wear) {
-    Shader sh = GetShader(ShaderId::Paper);
-    SetUniform(sh, "seed", seed);
-    SetUniform(sh, "base", base);
-    SetUniform(sh, "radius", 2.0f * L::kBakeScale);
-    SetUniform(sh, "wear", wear);
-    SetUniform(sh, "rough", 1.2f * L::kBakeScale);
-    FillShaderRect(sh, r);
+    FillPaper(r, seed, base, 2.0f, wear, 1.2f);
 }
 
 // The print was folded once to fit the wallet.
@@ -49,30 +44,10 @@ void FoldCrease(Rectangle card, float aging) {
                Color{60, 40, 20, (unsigned char)(45 * aging)});
 }
 
-void DrawPhoto(Texture2D img, Rectangle dst, float seed, float aging) {
-    float iw = (float)img.width, ih = (float)img.height;
-    float want = dst.width / dst.height;
-    Rectangle src = {0, 0, iw, ih};
-    if (iw / ih > want) {
-        src.width = ih * want;
-        src.x = (iw - src.width) * 0.5f;
-    } else {
-        src.height = iw / want;
-        src.y = (ih - src.height) * 0.3f;   // keep faces in portraits
-    }
-    Shader sh = GetShader(ShaderId::Photo);
-    SetUniform(sh, "srcRect", Vector4{src.x / iw, src.y / ih, src.width / iw, src.height / ih});
-    SetUniform(sh, "size", Vector2{dst.width * L::kBakeScale, dst.height * L::kBakeScale});
-    SetUniform(sh, "seed", seed);
-    SetUniform(sh, "aging", aging);
-    BeginShaderMode(sh);
-    DrawTexturePro(img, src, dst, {0, 0}, 0.0f, WHITE);
-    EndShaderMode();
-    DrawRectangleLinesEx(dst, 0.5f, Color{60, 40, 20, 70});
-}
 }  // namespace
 
-SleeveArt BakeSleeve(const Item& item, const Font& font, float aging, int seed) {
+SleeveArt BakeSleeve(const Item& item, const Font& font, float aging, int seed, Theme theme) {
+    if (theme == Theme::Dracula) return BakeFrame(item, font, aging, seed);
     SleeveArt art;
     float fs = 1.7f + seed * 3.13f;
     Rectangle card = CardRect();
@@ -86,7 +61,8 @@ SleeveArt BakeSleeve(const Item& item, const Font& font, float aging, int seed) 
     if (img.id != 0) {
         GenTextureMipmaps(&img);
         SetTextureFilter(img, TEXTURE_FILTER_TRILINEAR);
-        DrawPhoto(img, photo, fs, aging);
+        DrawAgedPhoto(img, photo, fs, aging, 0.0f);
+        DrawRectangleLinesEx(photo, 0.5f, Color{60, 40, 20, 70});
         UnloadTexture(img);
     }
     FoldCrease(card, aging);
@@ -155,9 +131,10 @@ void DrawSleeveShadow(const SleeveGeom& g, float alpha) {
     DrawSoftShadow(g.quad, {5, 10}, 14.0f, alpha);
 }
 
-void DrawSleeve(const SleeveGeom& g, const SleeveArt& art, Texture2D gloss) {
+void DrawSleeve(const SleeveGeom& g, const SleeveArt& art, Texture2D gloss, Color light) {
     Texture2D tex = g.front ? art.front.texture : art.back.texture;
-    DrawSurface(g.pj, tex, g.f, 10, 10, ShadeTint(g.shade), !g.front);
+    DrawSurface(g.pj, tex, g.f, 10, 10, light, !g.front);
+    if (gloss.id == 0) return;
     float ga = std::clamp(0.45f + (1.0f - g.shade) * 2.2f, 0.45f, 0.95f);
     DrawSurface(g.pj, gloss, g.f, 10, 10, ShadeTint(1.0f, ga), !g.front);
 }

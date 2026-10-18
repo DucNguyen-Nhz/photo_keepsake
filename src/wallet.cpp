@@ -1,4 +1,5 @@
 #include "wallet.h"
+#include "gothic.h"
 #include "layout.h"
 #include <cmath>
 
@@ -11,25 +12,6 @@ const Color kThread = {201, 174, 122, 235};
 
 float Roundness(float radius, Rectangle r) {
     return std::fmin(1.0f, 2.0f * radius / std::fmin(r.width, r.height));
-}
-
-void FillLeather(Rectangle r, float seed, Vector3 base, float radius, float wear) {
-    Shader sh = GetShader(ShaderId::Leather);
-    SetUniform(sh, "seed", seed);
-    SetUniform(sh, "base", base);
-    SetUniform(sh, "radius", radius * L::kBakeScale);
-    SetUniform(sh, "wear", wear);
-    FillShaderRect(sh, r);
-}
-
-void FillPaper(Rectangle r, float seed, Vector3 base, float radius, float wear) {
-    Shader sh = GetShader(ShaderId::Paper);
-    SetUniform(sh, "seed", seed);
-    SetUniform(sh, "base", base);
-    SetUniform(sh, "radius", radius * L::kBakeScale);
-    SetUniform(sh, "wear", wear);
-    SetUniform(sh, "rough", 1.5f * L::kBakeScale);
-    FillShaderRect(sh, r);
 }
 
 void Emboss(const Font& font, const char* text, Vector2 pos, float size) {
@@ -135,6 +117,10 @@ Quad PanelQuad(int side) {
 
 WalletArt BakeWallet(const Config& cfg, const Font& font) {
     WalletArt art;
+    if (cfg.theme == Theme::Dracula) {
+        TomeArt t = BakeTome(cfg, font);
+        return {t.cover, t.endpaper, t.page};
+    }
     art.outer = BakeOuter(cfg, font);
     art.inner = BakeInner(cfg, font);
     art.panel = BakePanel(cfg);

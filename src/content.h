@@ -7,7 +7,10 @@ struct Item {
     std::string note;        // text written on the back
 };
 
+enum class Theme { Wallet, Dracula };
+
 struct Config {
+    Theme theme = Theme::Dracula;
     float aging = 1.0f;      // 0 = fresh print, 1 = very worn
     std::string initials;    // embossed on the wallet cover
     std::string fontPath;    // handwriting font override

@@ -24,11 +24,12 @@ struct SleeveGeom {
     float shade;
 };
 
-SleeveArt BakeSleeve(const Item& item, const Font& font, float aging, int seed);
+SleeveArt BakeSleeve(const Item& item, const Font& font, float aging, int seed, Theme theme);
 void UnloadSleeve(SleeveArt& art);
 RenderTexture2D BakeGloss();
 
 // Chain the sleeves from `anchor`; stops at the first fully folded one.
 std::vector<SleeveGeom> LayoutSleeves(const std::vector<SleevePose>& poses, Vector2 anchor);
 void DrawSleeveShadow(const SleeveGeom& g, float alpha);
-void DrawSleeve(const SleeveGeom& g, const SleeveArt& art, Texture2D gloss);
+// `light` is a premultiplied tint; gloss.id == 0 skips the plastic sheen.
+void DrawSleeve(const SleeveGeom& g, const SleeveArt& art, Texture2D gloss, Color light);
