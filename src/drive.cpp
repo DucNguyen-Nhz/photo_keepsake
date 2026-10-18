@@ -61,9 +61,15 @@ std::string Lower(std::string s) {
     return s;
 }
 
+// Formats the app can't decode (iPhone HEIC, WebP) are fetched through Drive's
+// preview renderer, which returns a JPEG, and saved under the same base name as .jpg.
+bool NeedsConversion(const std::string& ext) {
+    return ext == ".heic" || ext == ".heif" || ext == ".webp";
+}
+
 bool Wanted(const std::string& name, bool& isImage) {
     std::string ext = Lower(fs::path(name).extension().string());
-    isImage = ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".bmp";
+    isImage = ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".bmp" || NeedsConversion(ext);
     return isImage || ext == ".txt" || Lower(name) == "wallet.ini";
 }
 
@@ -153,16 +159,22 @@ SyncResult SyncDriveFolder(const std::string& folderId, const std::string& cache
     std::map<std::string, std::string> now;
     for (const Entry& e : ParseListing(html)) {
         bool isImage = false;
-        if (e.name.empty() || !Wanted(e.name, isImage) || now.count(e.name)) continue;
-        now[e.name] = e.id;
-        fs::path dest = dir / fs::u8path(e.name);
-        auto it = old.find(e.name);
+        if (e.name.empty() || !Wanted(e.name, isImage)) continue;
+        bool convert = NeedsConversion(Lower(fs::path(e.name).extension().string()));
+        std::string name = convert ? fs::path(e.name).stem().string() + ".jpg" : e.name;
+        if (now.count(name)) continue;
+        now[name] = e.id;
+        fs::path dest = dir / fs::u8path(name);
+        auto it = old.find(name);
         if (isImage && it != old.end() && it->second == e.id && fs::exists(dest)) continue;   // cached
 
         fs::path part = dir / (e.id + ".part");
-        if (!Curl("https://drive.usercontent.google.com/download?id=" + e.id + "&export=download&confirm=t", part)) {
+        std::string url = convert ? "https://drive.google.com/thumbnail?id=" + e.id + "&sz=w2000"
+                                  : "https://drive.usercontent.google.com/download?id=" + e.id +
+                                        "&export=download&confirm=t";
+        if (!Curl(url, part)) {
             fs::remove(part, ec);
-            if (it != old.end()) now[e.name] = it->second;   // keep the old copy
+            if (it != old.end()) now[name] = it->second;   // keep the old copy
             continue;
         }
         if (!isImage && fs::exists(dest) && ReadAll(dest) == ReadAll(part)) {   // note unchanged

@@ -68,6 +68,8 @@ Put photos in this folder (the setup script creates it and opens it for you):
 On macOS, `Library` is hidden in Finder: use **Go → Go to Folder…** (Shift+Cmd+G) and paste the path.
 
 - Every `.jpg` / `.png` is one photo, ordered by file name, so number them: `01_…`, `02_…`.
+  (iPhone `.heic` photos work from a Google Drive folder, which converts them; in a local folder,
+  export them as JPEG first.)
 - The note on a photo's back is a `.txt` file with the **same name**:
 
 ```
