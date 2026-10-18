@@ -138,8 +138,8 @@ The wallet docks to the side of the screen; only a strip of leather peeks out.
 | Esc / Space                     | Close / toggle                                   |
 | Cmd+Q (macOS), Ctrl+Q           | Quit                                             |
 
-Its position and dock edge are remembered between runs. With many photos, the wallet unfolds as
-far as your screen height allows.
+Its position and dock edge are remembered between runs. With more photos than fit on screen, the
+whole wallet scrolls up as they drop, keeping the newest one in view; scroll up to fold them back.
 
 ---
 

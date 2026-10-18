@@ -111,7 +111,8 @@ private:
     bool hoverPeek_ = false;
     bool wantOpen_ = false;
     int openCount_ = 1;
-    int maxOpen_ = 1;
+    int maxOpen_ = 1;     // number of photos
+    Spring scroll_{80.0f, 17.0f};   // content shifted up so the lowest hanging photo stays on screen
     float time_ = 0.0f;
     Dust dust_;
     Bats bats_;
@@ -202,8 +203,9 @@ void App::FitWindow() {
         return L::kTop + L::kWalletH - L::kPocketDepth + k * L::kSleeveStep + L::kMargin + 12.0f;
     };
     maxOpen_ = std::max(1, (int)content_.items.size());
-    while (maxOpen_ > 1 && needH(maxOpen_) > mon.height - 60) maxOpen_--;
-    SetWindowSize((int)L::kWindowW, (int)needH(maxOpen_));
+    int fit = maxOpen_;   // more photos than this scroll the wallet up instead
+    while (fit > 1 && needH(fit) > mon.height - 60) fit--;
+    SetWindowSize((int)L::kWindowW, (int)needH(fit));
     openCount_ = std::clamp(openCount_, 1, maxOpen_);
 }
 
@@ -337,7 +339,8 @@ Hit App::HitTest(Vector2 m) const {
         int idx = (int)((m.y - menuPos_.y - 5) / kMenuRow);
         return {HitKind::Menu, std::clamp(idx, 0, kMenuItems - 1)};
     }
-    m.x -= slide_.x;   // wallet and sleeves are drawn shifted by the slide
+    m.x -= slide_.x;   // wallet and sleeves are drawn shifted by the slide and scroll
+    m.y += scroll_.x;
     if (PointInQuad(m, walletHits_.cover) || PointInQuad(m, walletHits_.panel))
         return {HitKind::Wallet, -1};
     for (int i = 0; i < (int)geoms_.size(); i++)
@@ -473,8 +476,14 @@ void App::Update(float dt) {
     }
     UpdateInput(dt);
     UpdateSequence();
+    // Scroll so the lowest photo that is (or is about to be) hanging stays in view.
+    int hanging = 0;
+    for (const auto& sl : sleeves_) hanging += sl.drop.target > 0.5f ? 1 : 0;
+    float bottom = L::kTop + L::kWalletH - L::kPocketDepth + hanging * L::kSleeveStep + 24.0f;
+    scroll_.target = std::max(0.0f, bottom - (float)GetScreenHeight());
     cover_.Update(dt);
     slide_.Update(dt);
+    scroll_.Update(dt);
     for (auto& s : sleeves_) {
         s.drop.Update(dt);
         s.flip.Update(dt);
@@ -521,7 +530,7 @@ void App::Draw() {
     WalletPose wp{cover_.x, time_, side_};
 
     rlPushMatrix();
-    rlTranslatef(slide_.x, 0.0f, 0.0f);
+    rlTranslatef(slide_.x, -scroll_.x, 0.0f);
     BeginStraightBlend();
     for (const auto& g : geoms_) DrawSleeveShadow(g, 0.28f);
     DrawWalletShadow(wp);
