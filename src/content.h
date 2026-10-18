@@ -14,11 +14,13 @@ struct Config {
     float aging = 1.0f;      // 0 = fresh print, 1 = very worn
     std::string initials;    // embossed on the wallet cover
     std::string fontPath;    // handwriting font override
+    std::string drive;       // Google Drive folder share link
     int x = -1, y = -1;      // window position override
 };
 
 struct Content {
     std::string dir;
+    std::string driveId;     // set when photos come from a Google Drive folder (dir is its cache)
     int startOpen = 0;       // --open N: start with N sleeves hanging
     int startFlip = -1;      // --flip I: start with sleeve I showing its note
     std::vector<Item> items;

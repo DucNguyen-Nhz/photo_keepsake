@@ -1,5 +1,6 @@
 #include "anim.h"
 #include "content.h"
+#include "drive.h"
 #include "gothic.h"
 #include "layout.h"
 #include "photo.h"
@@ -9,9 +10,12 @@
 #include "raylib.h"
 #include "rlgl.h"
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <set>
+#include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace {
@@ -28,7 +32,14 @@ struct Hit {
     int index = -1;
 };
 
-const char* kMenuLabels[3] = {"", "", "Put away (quit)"};
+constexpr int kMenuItems = 4;   // keep on top, open/close, refresh, quit
+constexpr float kMenuRow = 26.0f;
+
+// Background Drive sync; shared so a sync still running at quit can't touch a dead App.
+struct SyncJob {
+    std::atomic<bool> done{false};
+    SyncResult result;
+};
 
 constexpr float kPeek = 26.0f;        // leather left visible at the screen edge when tucked away
 constexpr float kDockSnap = 80.0f;    // release this close to an edge to dock
@@ -68,12 +79,19 @@ private:
     std::string MenuLabel(int i) const;
     void Toggle();
     void Step(int dir);
+    void LoadAssets();
+    void UnloadAssets();
+    void FitWindow();
+    void Reload();        // re-read the photo folder and rebake everything
+    void Refresh();       // sync from Drive (if configured), then reload
     float WalletGlobalX() const;     // screen x of the inside panel's left edge
     float HiddenOffset() const;      // slide offset that tucks the wallet behind the dock edge
     void DockTo(int edge, Vector2 winPos);
     void TryDock();
     void Undock();
 
+    std::vector<std::string> args_;
+    std::shared_ptr<SyncJob> sync_;
     Content content_;
     Theme theme_ = Theme::Dracula;
     Font font_{};        // notes
@@ -135,27 +153,18 @@ Font LoadFontFor(const Content& c, const std::string& path, bool& owned) {
 }
 
 bool App::Init(int argc, char** argv) {
+    args_.assign(argv, argv + argc);
     content_ = LoadContent(argc, argv);
     SetTraceLogLevel(LOG_WARNING);
     OpenWidgetWindow((int)L::kWindowW, 400, "Wallet");
     if (!IsWindowReady()) return false;
     SetTargetFPS(60);
+    FitWindow();
 
-    // Size the window to fit as many hanging sleeves as the monitor allows.
     int mon = GetCurrentMonitor();
     Vector2 monPos = GetMonitorPosition(mon);
-    int monW = GetMonitorWidth(mon), monH = GetMonitorHeight(mon);
-    int n = (int)content_.items.size();
-    auto needH = [](int k) {
-        return L::kTop + L::kWalletH - L::kPocketDepth + k * L::kSleeveStep + L::kMargin + 12.0f;
-    };
-    maxOpen_ = n;
-    while (maxOpen_ > 1 && needH(maxOpen_) > monH - 60) maxOpen_--;
-    int winH = (int)needH(maxOpen_);
-    SetWindowSize((int)L::kWindowW, winH);
-
     SavedState st;
-    st.x = (int)(monPos.x + monW - L::kWindowW);
+    st.x = (int)(monPos.x + GetMonitorWidth(mon) - L::kWindowW);
     st.y = (int)monPos.y + 40;
     LoadSavedState(st);
     if (content_.cfg.x >= 0 && content_.cfg.y >= 0) {
@@ -169,19 +178,7 @@ bool App::Init(int argc, char** argv) {
     }
 
     InitRender();
-    theme_ = content_.cfg.theme;
-    bool gothic = theme_ == Theme::Dracula;
-    std::string fonts = AssetDir() + "fonts/";
-    std::string notePath = !content_.cfg.fontPath.empty() ? content_.cfg.fontPath
-                           : gothic ? fonts + "CormorantGaramond-Italic.ttf"
-                                    : fonts + "PatrickHand-Regular.ttf";
-    font_ = LoadFontFor(content_, notePath, ownFont_);
-    titleFont_ = gothic ? LoadFontFor(content_, fonts + "GrenzeGotisch.ttf", ownTitle_) : font_;
-    wallet_ = BakeWallet(content_.cfg, titleFont_, font_);
-    if (!gothic) gloss_ = BakeGloss();
-    sleeves_.resize(n);
-    for (int i = 0; i < n; i++)
-        sleeves_[i].art = BakeSleeve(content_.items[i], font_, content_.cfg.aging, i + 1, theme_);
+    LoadAssets();
 
     if (content_.startOpen > 0) {
         wantOpen_ = true;
@@ -193,17 +190,81 @@ bool App::Init(int argc, char** argv) {
         if (content_.startFlip >= 0 && content_.startFlip < openCount_)
             sleeves_[content_.startFlip].flip.target = 1.0f;
     }
+    if (!content_.driveId.empty()) Refresh();   // show the cache now, sync in the background
     return true;
+}
+
+// Size the window to fit as many hanging sleeves as the monitor allows.
+void App::FitWindow() {
+    Vector2 wp = GetWindowPosition();
+    Rectangle mon = MonitorAt({wp.x + L::kWindowW * 0.5f, wp.y + 100.0f});
+    auto needH = [](int k) {
+        return L::kTop + L::kWalletH - L::kPocketDepth + k * L::kSleeveStep + L::kMargin + 12.0f;
+    };
+    maxOpen_ = std::max(1, (int)content_.items.size());
+    while (maxOpen_ > 1 && needH(maxOpen_) > mon.height - 60) maxOpen_--;
+    SetWindowSize((int)L::kWindowW, (int)needH(maxOpen_));
+    openCount_ = std::clamp(openCount_, 1, maxOpen_);
+}
+
+void App::LoadAssets() {
+    theme_ = content_.cfg.theme;
+    bool gothic = theme_ == Theme::Dracula;
+    std::string fonts = AssetDir() + "fonts/";
+    std::string notePath = !content_.cfg.fontPath.empty() ? content_.cfg.fontPath
+                           : gothic ? fonts + "CormorantGaramond-Italic.ttf"
+                                    : fonts + "PatrickHand-Regular.ttf";
+    font_ = LoadFontFor(content_, notePath, ownFont_);
+    titleFont_ = gothic ? LoadFontFor(content_, fonts + "GrenzeGotisch.ttf", ownTitle_) : font_;
+    if (!gothic) ownTitle_ = false;
+    wallet_ = BakeWallet(content_.cfg, titleFont_, font_);
+    if (!gothic) gloss_ = BakeGloss();
+    int n = (int)content_.items.size();
+    sleeves_.resize(n);   // keeps the pose of sleeves that still exist
+    for (int i = 0; i < n; i++)
+        sleeves_[i].art = BakeSleeve(content_.items[i], font_, content_.cfg.aging, i + 1, theme_);
+}
+
+void App::UnloadAssets() {
+    for (auto& s : sleeves_) UnloadSleeve(s.art);
+    if (gloss_.id != 0) UnloadRenderTexture(gloss_);
+    gloss_ = {};
+    UnloadWallet(wallet_);
+    if (ownFont_) UnloadFont(font_);
+    if (ownTitle_) UnloadFont(titleFont_);
+    ownFont_ = ownTitle_ = false;
+}
+
+void App::Reload() {
+    std::vector<char*> argv;
+    for (auto& a : args_) argv.push_back(a.data());
+    int startOpen = content_.startOpen, startFlip = content_.startFlip;
+    UnloadAssets();
+    geoms_.clear();   // last frame's sleeve geometry may index photos that are gone
+    content_ = LoadContent((int)argv.size(), argv.data());
+    content_.startOpen = startOpen;
+    content_.startFlip = startFlip;
+    LoadAssets();
+    FitWindow();
+}
+
+void App::Refresh() {
+    if (content_.driveId.empty()) {
+        Reload();
+        return;
+    }
+    if (sync_) return;   // already syncing
+    sync_ = std::make_shared<SyncJob>();
+    std::thread([job = sync_, id = content_.driveId] {
+        job->result = SyncDriveFolder(id, DriveCacheDir(id));
+        job->done = true;
+    }).detach();
 }
 
 void App::Shutdown() {
     Vector2 p = GetWindowPosition();
     SaveState({(int)p.x, (int)p.y, dock_});
-    for (auto& s : sleeves_) UnloadSleeve(s.art);
-    if (gloss_.id != 0) UnloadRenderTexture(gloss_);
-    UnloadWallet(wallet_);
-    if (ownFont_) UnloadFont(font_);
-    if (ownTitle_) UnloadFont(titleFont_);
+    UnloadAssets();
     ShutdownRender();
     CloseWindow();
 }
@@ -261,19 +322,20 @@ void App::Undock() {
 }
 
 Rectangle App::MenuRect() const {
-    return {menuPos_.x, menuPos_.y, 170, 3 * 26.0f + 10};
+    return {menuPos_.x, menuPos_.y, 170, kMenuItems * kMenuRow + 10};
 }
 
 std::string App::MenuLabel(int i) const {
     if (i == 0) return IsTopmost() ? "Keep on top: yes" : "Keep on top: no";
     if (i == 1) return wantOpen_ ? "Close wallet" : "Open wallet";
-    return kMenuLabels[i];
+    if (i == 2) return sync_ ? "Refreshing..." : "Refresh photos";
+    return "Put away (quit)";
 }
 
 Hit App::HitTest(Vector2 m) const {
     if (menuOpen_ && CheckCollisionPointRec(m, MenuRect())) {
-        int idx = (int)((m.y - menuPos_.y - 5) / 26.0f);
-        return {HitKind::Menu, std::clamp(idx, 0, 2)};
+        int idx = (int)((m.y - menuPos_.y - 5) / kMenuRow);
+        return {HitKind::Menu, std::clamp(idx, 0, kMenuItems - 1)};
     }
     m.x -= slide_.x;   // wallet and sleeves are drawn shifted by the slide
     if (PointInQuad(m, walletHits_.cover) || PointInQuad(m, walletHits_.panel))
@@ -307,6 +369,7 @@ void App::UpdateInput(float dt) {
         if (hit.kind == HitKind::Menu) {
             if (hit.index == 0) SetTopmost(!IsTopmost());
             else if (hit.index == 1) Toggle();
+            else if (hit.index == 2) Refresh();
             else quit_ = true;
         } else if (hit.kind == HitKind::Wallet) {
             pressing_ = true;
@@ -343,7 +406,8 @@ void App::UpdateInput(float dt) {
     if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) && hit.kind != HitKind::None &&
         hit.kind != HitKind::Menu) {
         menuOpen_ = true;
-        menuPos_ = {std::min(m.x, L::kWindowW - 175.0f), std::min(m.y, GetScreenHeight() - 95.0f)};
+        menuPos_ = {std::min(m.x, L::kWindowW - 175.0f),
+                    std::min(m.y, GetScreenHeight() - (kMenuItems * kMenuRow + 15.0f))};
     }
 
     // Wheel: down drops the next sleeve, up folds the last one back.
@@ -401,6 +465,12 @@ void App::UpdateSequence() {
 
 void App::Update(float dt) {
     time_ += dt;
+    if (sync_ && sync_->done) {
+        SyncResult r = sync_->result;
+        sync_.reset();
+        if (!r.ok) TraceLog(LOG_WARNING, "Drive sync: %s", r.error.c_str());
+        if (r.changed) Reload();
+    }
     UpdateInput(dt);
     UpdateSequence();
     cover_.Update(dt);
@@ -495,8 +565,8 @@ void App::DrawMenu() {
     DrawRectangleRounded(r, 0.12f, 6, Color{238, 228, 204, 250});
     DrawRectangleRoundedLinesEx(r, 0.12f, 6, 1.0f, Color{120, 88, 56, 170});
     Hit h = HitTest(CursorLocal());
-    for (int i = 0; i < 3; i++) {
-        Rectangle row = {r.x + 4, r.y + 5 + i * 26.0f, r.width - 8, 26};
+    for (int i = 0; i < kMenuItems; i++) {
+        Rectangle row = {r.x + 4, r.y + 5 + i * kMenuRow, r.width - 8, kMenuRow};
         if (h.kind == HitKind::Menu && h.index == i)
             DrawRectangleRounded(row, 0.3f, 4, Color{150, 108, 66, 55});
         DrawTextEx(font_, MenuLabel(i).c_str(), {row.x + 8, row.y + 3}, 20, 0, Color{40, 34, 60, 230});

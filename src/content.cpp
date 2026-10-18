@@ -1,4 +1,5 @@
 #include "content.h"
+#include "drive.h"
 #include "raylib.h"
 #include <algorithm>
 #include <cstdlib>
@@ -83,6 +84,19 @@ std::string ConfigDir() {
 #endif
 }
 
+// Applies the keys present in `path`; relative font paths resolve against `base`.
+void ApplyIni(Config& cfg, const std::string& path, const std::string& base) {
+    for (auto& [k, v] : ReadIni(path)) {
+        if (k == "theme") cfg.theme = v == "wallet" ? Theme::Wallet : Theme::Dracula;
+        else if (k == "aging") cfg.aging = std::clamp((float)std::atof(v.c_str()), 0.0f, 1.0f);
+        else if (k == "initials") cfg.initials = v;
+        else if (k == "font") cfg.fontPath = v.empty() || v[0] == '/' ? v : base + "/" + v;
+        else if (k == "drive") cfg.drive = v;
+        else if (k == "x") cfg.x = std::atoi(v.c_str());
+        else if (k == "y") cfg.y = std::atoi(v.c_str());
+    }
+}
+
 Content LoadContent(int argc, char** argv) {
     Content c;
     std::string userDir = ConfigDir() + "/items";
@@ -98,25 +112,35 @@ Content LoadContent(int argc, char** argv) {
         }
     }
 
+    // Local wallet.ini always has the last word, so apply it after any other source.
+    std::string localDir = c.dir, localIni = c.dir + "/wallet.ini";
+    ApplyIni(c.cfg, localIni, localDir);
+
+    if (!c.cfg.drive.empty()) {
+        c.driveId = DriveFolderId(c.cfg.drive);
+        if (c.driveId.empty()) TraceLog(LOG_WARNING, "drive= is not a Google Drive folder link");
+    }
+    if (!c.driveId.empty()) {
+        c.dir = DriveCacheDir(c.driveId);
+        ApplyIni(c.cfg, c.dir + "/wallet.ini", c.dir);
+        ApplyIni(c.cfg, localIni, localDir);
+    }
+
     c.items = ScanItems(c.dir);
-    if (c.items.empty() && !explicitDir) {
+    if (c.items.empty() && !explicitDir && c.driveId.empty()) {
         TraceLog(LOG_WARNING, "No photos in %s, showing samples", c.dir.c_str());
         c.dir = AssetDir() + "samples";
         c.items = ScanItems(c.dir);
+        ApplyIni(c.cfg, c.dir + "/wallet.ini", c.dir);
+        ApplyIni(c.cfg, localIni, localDir);
     }
     if (c.items.empty()) {
         Item hint;
-        hint.note = "Put photos (.jpg/.png) and notes (.txt with the same name) in:\n" + userDir;
+        hint.note = c.driveId.empty()
+                        ? "Put photos (.jpg/.png) and notes (.txt with the same name) in:\n" + userDir
+                        : "Fetching photos from Google Drive...\nIf nothing appears, check the folder is shared "
+                          "as \"Anyone with the link\" and has .jpg/.png files.";
         c.items.push_back(hint);
-    }
-
-    for (auto& [k, v] : ReadIni(c.dir + "/wallet.ini")) {
-        if (k == "theme") c.cfg.theme = v == "wallet" ? Theme::Wallet : Theme::Dracula;
-        else if (k == "aging") c.cfg.aging = std::clamp((float)std::atof(v.c_str()), 0.0f, 1.0f);
-        else if (k == "initials") c.cfg.initials = v;
-        else if (k == "font") c.cfg.fontPath = v.empty() || v[0] == '/' ? v : c.dir + "/" + v;
-        else if (k == "x") c.cfg.x = std::atoi(v.c_str());
-        else if (k == "y") c.cfg.y = std::atoi(v.c_str());
     }
     return c;
 }

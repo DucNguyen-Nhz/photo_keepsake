@@ -85,6 +85,25 @@ Vietnamese characters work with both themes' fonts. Photos are cropped to a land
 
 If the folder is empty, the wallet shows three sample photos.
 
+### Photos from Google Drive
+
+Instead of a local folder, the wallet can show a Google Drive folder:
+
+1. In Google Drive, put the photos and `.txt` notes in a folder (same naming rules as above;
+   a `wallet.ini` there works too). Notes must be uploaded `.txt` files, not Google Docs.
+2. Share the folder: **Share → General access → Anyone with the link (Viewer)**, copy the link.
+3. Add the link to `wallet.ini` in your local photo folder:
+   ```ini
+   drive=https://drive.google.com/drive/folders/1AbC...xyz?usp=sharing
+   ```
+
+On start the wallet shows its cached copy right away, then syncs in the background and updates
+itself if anything changed. Right-click → **Refresh photos** syncs again. Offline, it keeps showing
+the last copy (stored in `drive/` inside the settings folder).
+
+Downloads use `curl` (built into macOS, Windows 10+ and most Linux systems). Anyone with the link
+can see the photos, so only use this for photos you're happy to share that way. Subfolders are ignored.
+
 ### Settings: `wallet.ini`
 
 Optional, in the same folder:
@@ -94,6 +113,7 @@ theme=dracula      # dracula (default) or wallet
 initials=E. M.     # pressed into the cover (dracula: replaces the "Dracula" title)
 aging=0.9          # 0 = fresh print, 1 = very worn
 font=myhand.ttf    # your own font for the notes (.ttf, placed in the same folder)
+drive=https://drive.google.com/drive/folders/...   # load photos from a shared Drive folder
 ```
 
 ---
@@ -112,7 +132,7 @@ The wallet docks to the side of the screen; only a strip of leather peeks out.
 | Drag up/down while docked       | Moves it along the edge                          |
 | Drag away from the edge         | Undocks it so it floats anywhere                 |
 | Drop it near a screen edge      | Docks to that edge (left or right)               |
-| Right-click                     | Menu: keep on top, open/close, quit              |
+| Right-click                     | Menu: keep on top, open/close, refresh photos, quit |
 | Esc / Space                     | Close / toggle                                   |
 | Cmd+Q (macOS), Ctrl+Q           | Quit                                             |
 
@@ -150,7 +170,10 @@ Command-line options (all platforms): a folder path to load photos from instead 
   Delete `state.ini` in the settings folder (one level above `items/`) to reset its position.
 - **Scrolling goes the wrong way** — the up/down arrow keys work too. With macOS natural scrolling,
   swipe up to drop the next photo.
-- **Photos don't change** — restart the app; it reads the folder at start.
+- **Photos don't change** — right-click → Refresh photos (or restart the app).
+- **Drive photos don't appear** — check the folder is shared as "Anyone with the link", the files are
+  .jpg/.png (not Google Photos albums) and notes are .txt files. Run the app from a terminal to see
+  the sync message.
 
 ---
 

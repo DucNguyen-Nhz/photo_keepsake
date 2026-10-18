@@ -28,9 +28,11 @@ add_executable(wallet_image MACOSX_BUNDLE
   src/wallet.cpp
   src/photo.cpp
   src/note.cpp
-  src/gothic.cpp)
+  src/gothic.cpp
+  src/drive.cpp)
 
-target_link_libraries(wallet_image PRIVATE raylib)
+find_package(Threads REQUIRED)
+target_link_libraries(wallet_image PRIVATE raylib Threads::Threads)
 # Direct GLFW access (cursor polling while mouse-passthrough is on).
 target_include_directories(wallet_image PRIVATE ${raylib_SOURCE_DIR}/src/external/glfw/include)
 
