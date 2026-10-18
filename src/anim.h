@@ -22,6 +22,8 @@ struct Particle {
 class Dust {
 public:
     void Burst(Vector2 from, Vector2 to, int count);
+    // Slow motes floating in `area` (candle-lit dust in the air).
+    void Motes(Rectangle area, int count);
     void Update(float dt);
     void Draw() const;
     bool Empty() const { return parts_.empty(); }

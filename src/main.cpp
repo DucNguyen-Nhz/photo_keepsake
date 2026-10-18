@@ -99,6 +99,7 @@ private:
     Bats bats_;
     Petals petals_;
     float petalTimer_ = 0.0f;
+    float moteTimer_ = 0.0f;
     bool dustDone_ = false;
 
     bool pressing_ = false, dragging_ = false;
@@ -411,6 +412,7 @@ void App::Update(float dt) {
     if (wantOpen_ && !dustDone_ && cover_.x > 0.3f && theme_ == Theme::Dracula) {
         bats_.Burst({PanelX0(side_) + L::kWalletW * 0.5f, L::kTop + L::kWalletH * 0.4f}, 3);
         petals_.Burst({L::kHingeX - 60, L::kTop + 20}, {L::kHingeX + 60, L::kTop + L::kWalletH - 20}, 22);
+        dust_.Burst({L::kHingeX, L::kTop + 6}, {L::kHingeX, L::kTop + L::kWalletH - 6}, 40);
         dustDone_ = true;
     }
     if (wantOpen_ && !dustDone_ && cover_.x > 0.3f) {
@@ -429,6 +431,11 @@ void App::Update(float dt) {
         float x0 = PanelX0(side_);
         petals_.Burst({x0 + 10, L::kTop + L::kWalletH}, {x0 + L::kWalletW - 10, L::kTop + L::kWalletH}, 1);
         petalTimer_ = Frand(0.8f, 2.0f);
+    }
+    if (theme_ == Theme::Dracula && cover_.x > 0.9f && (moteTimer_ -= dt) <= 0.0f) {
+        float hang = (float)geoms_.size() * L::kSleeveStep;
+        dust_.Motes({PanelX0(side_) - 10, L::kTop, L::kWalletW + 20, L::kWalletH + hang}, 1);
+        moteTimer_ = 0.12f;
     }
 }
 
@@ -469,6 +476,12 @@ void App::Draw() {
         }
     }
     walletHits_ = DrawWallet(wallet_, wp);
+    if (gothic) {
+        BeginStraightBlend();
+        DrawSpider({PanelX0(side_) + 6, L::kTop + L::kWalletH - 2}, time_,
+                   std::clamp((cover_.x - 0.6f) * 3.0f, 0.0f, 1.0f));
+        BeginPremulBlend();
+    }
     if (gothic && cover_.x > 0.5f) {
         DrawCandleFlame(PageWick(side_), 1.0f, time_, 0.9f, std::clamp((cover_.x - 0.5f) * 2.5f, 0.0f, 1.0f));
     }

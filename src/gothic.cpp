@@ -35,6 +35,50 @@ void CenterText(const Font& f, const char* t, float cx, float y, float size, Col
     DrawTextEx(f, t, {cx - m.x * 0.5f, y}, size, 1.0f, c);
 }
 
+// Corner cobweb: spokes fanning from `corner` into the quadrant (dx, dy), joined by sagging rings.
+void DrawCobweb(Vector2 corner, float size, float dx, float dy, unsigned seed, unsigned char alpha) {
+    Rng rng{seed * 2654435761u + 17u};
+    const int spokes = 7;
+    Vector2 dir[spokes];
+    for (int i = 0; i < spokes; i++) {
+        float t = (float)i / (spokes - 1) * PI * 0.5f;
+        if (i > 0 && i < spokes - 1) t += rng.Range(-0.08f, 0.08f);
+        dir[i] = {dx * std::cos(t), dy * std::sin(t)};
+        float len = size * rng.Range(0.8f, 1.0f);
+        DrawLineEx(corner, {corner.x + dir[i].x * len, corner.y + dir[i].y * len}, 0.5f,
+                   Color{228, 226, 232, alpha});
+    }
+    for (int k = 1; k <= 5; k++) {
+        float rad = size * k / 5.6f;
+        for (int i = 0; i + 1 < spokes; i++) {
+            float r0 = rad * rng.Range(0.94f, 1.04f), r1 = rad * rng.Range(0.94f, 1.04f);
+            Vector2 p = {corner.x + dir[i].x * r0, corner.y + dir[i].y * r0};
+            Vector2 q = {corner.x + dir[i + 1].x * r1, corner.y + dir[i + 1].y * r1};
+            Vector2 m = {(p.x + q.x) * 0.5f, (p.y + q.y) * 0.5f};
+            m = {m.x + (corner.x - m.x) * 0.14f, m.y + (corner.y - m.y) * 0.14f};   // sag
+            Color c = {228, 226, 232, (unsigned char)(alpha * 0.8f)};
+            DrawLineEx(p, m, 0.4f, c);
+            DrawLineEx(m, q, 0.4f, c);
+        }
+    }
+    // a broken strand drifting loose
+    int i = 2 + (int)rng.Range(0, 3);
+    Vector2 a = {corner.x + dir[i].x * size * 0.6f, corner.y + dir[i].y * size * 0.6f};
+    Vector2 b = {a.x + dx * size * 0.15f, a.y + dy * size * 0.45f};
+    DrawLineEx(a, b, 0.4f, Color{228, 226, 232, (unsigned char)(alpha * 0.6f)});
+}
+
+// Fine dust specks over `r`, and an optional dusty film along the top edge.
+void DrawDust(Rectangle r, unsigned seed, int count, bool topFilm) {
+    Rng rng{seed * 747796405u + 3u};
+    for (int i = 0; i < count; i++)
+        DrawCircleV({rng.Range(r.x, r.x + r.width), rng.Range(r.y, r.y + r.height)}, rng.Range(0.25f, 0.75f),
+                    Color{214, 208, 196, (unsigned char)rng.Range(25, 85)});
+    if (topFilm)
+        DrawRectangleGradientV((int)r.x, (int)r.y, (int)r.width, 6, Color{206, 200, 188, 70},
+                               Color{206, 200, 188, 0});
+}
+
 // Clip drawing inside a bake to `r` (1x units).
 void BeginBakeClip(Rectangle r) {
     float s = L::kBakeScale;
@@ -106,6 +150,9 @@ RenderTexture2D BakeCover(const Config& cfg, const Font& title) {
     DrawTriangle({clasp.x + clasp.width * 0.5f, clasp.y + clasp.height * 0.45f},
                  {clasp.x + clasp.width * 0.5f - 1.6f, clasp.y + clasp.height * 0.62f},
                  {clasp.x + clasp.width * 0.5f + 1.6f, clasp.y + clasp.height * 0.62f}, Color{12, 6, 4, 255});
+    DrawDust(r, 13u, 170, true);
+    DrawCobweb({r.x + 3, r.y + 3}, 46.0f, 1, 1, 11u, 110);
+    DrawCobweb({r.x + TW - 3, r.y + TH - 3}, 30.0f, -1, -1, 12u, 90);
     BakeEnd(rt);
     return rt;
 }
@@ -168,6 +215,9 @@ RenderTexture2D BakeEndpaper(const Config& cfg) {
     RoseSprig({oval.x - 26, e.y + e.height + 4}, {oval.x - 4, oval.y + oh - 14}, 7.0f, Color{160, 16, 36, 255});
     RoseSprig({oval.x + ow + 26, e.y + e.height + 4}, {oval.x + ow + 4, oval.y + oh - 14}, 7.0f,
               Color{160, 16, 36, 255});
+    DrawDust(e, 23u, 120, false);
+    DrawCobweb({e.x + e.width, e.y}, 52.0f, -1, 1, 21u, 125);
+    DrawCobweb({e.x, e.y}, 30.0f, 1, 1, 22u, 100);
     EndScissorMode();
     DrawRectangleLinesEx(e, 1.0f, kGoldDim);
     BakeEnd(rt);
@@ -211,6 +261,8 @@ RenderTexture2D BakePage(const Config& cfg, const Font& title, const Font& scrip
                      {pocket.x + pocket.width - in, pocket.y + pocket.height - in}, 3.6f, 2.4f, 1.0f, thread);
     DrawStitchedLine({pocket.x + pocket.width - in, pocket.y + pocket.height - in},
                      {pocket.x + pocket.width - in, pocket.y + 5}, 3.6f, 2.4f, 1.0f, thread);
+    DrawDust(page, 31u, 110, true);
+    DrawCobweb({pocket.x + 1, pocket.y + pocket.height - 1}, 32.0f, 1, -1, 32u, 110);
     BakeEnd(rt);
     return rt;
 }
@@ -257,6 +309,13 @@ RenderTexture2D BakeFrameFront(const Item& item, float aging, float seed) {
         DrawCircleV(c, 1.8f, Color{110, 26, 30, 255});
     }
     DrawCandleStub(kCandleX, kCandleBase, 9.0f, 24.0f, (unsigned)(seed * 1000));
+    unsigned us = (unsigned)(seed * 1000);
+    Rng rng{us};
+    DrawDust(f, us + 1, 150, true);
+    bool left = rng.Next() < 0.5f;
+    DrawCobweb({left ? f.x + 2 : f.x + f.width - 2, f.y + 2}, rng.Range(32.0f, 46.0f), left ? 1.0f : -1.0f, 1,
+               us + 2, 125);
+    if (rng.Next() < 0.5f) DrawCobweb({f.x + 2, f.y + f.height - 2}, rng.Range(20.0f, 28.0f), 1, -1, us + 3, 100);
     BakeEnd(rt);
     return rt;
 }
@@ -287,6 +346,8 @@ RenderTexture2D BakeFrameBack(const Item& item, const Font& note, float aging, f
     DrawCircleV(seal, 10.0f, Color{132, 14, 22, 255});
     DrawCircleV(seal, 7.0f, Color{112, 10, 18, 255});
     DrawRose(seal, 4.6f, Color{96, 8, 16, 255});
+    DrawDust(f, (unsigned)(seed * 1000) + 9, 120, true);
+    DrawCobweb({f.x + f.width - 2, f.y + 2}, 34.0f, -1, 1, (unsigned)(seed * 1000) + 8, 110);
     BakeEnd(rt);
     return rt;
 }
@@ -469,4 +530,24 @@ void Petals::Draw() const {
         DrawTriangle(pt(-w * 0.6f, -p.size * 0.15f), pt(0, p.size * 0.5f), pt(w * 0.6f, -p.size * 0.15f), c);
         DrawTriangle(pt(-w * 0.6f, -p.size * 0.15f), pt(w * 0.6f, -p.size * 0.15f), pt(0, p.size * 0.5f), c);
     }
+}
+
+void DrawSpider(Vector2 anchor, float time, float alpha) {
+    if (alpha <= 0.01f) return;
+    float drop = 28.0f + 60.0f * (0.5f + 0.5f * std::sin(time * 0.33f));   // lowers and climbs back
+    Vector2 body = {anchor.x + std::sin(time * 1.3f) * 2.5f, anchor.y + drop};
+    DrawLineEx(anchor, {body.x, body.y - 2.0f}, 0.6f, Color{225, 225, 232, (unsigned char)(150 * alpha)});
+    Color ink = {18, 12, 16, (unsigned char)(240 * alpha)};
+    for (int side : {-1, 1}) {
+        for (int i = 0; i < 4; i++) {
+            float a = (-50.0f + i * 32.0f) * DEG2RAD + std::sin(time * 5.0f + i + side) * 0.08f;
+            Vector2 knee = {body.x + side * std::cos(a) * 3.8f, body.y + std::sin(a) * 3.2f - 2.0f};
+            Vector2 foot = {knee.x + side * 2.6f, knee.y + 3.2f};
+            DrawLineEx(body, knee, 0.6f, ink);
+            DrawLineEx(knee, foot, 0.5f, ink);
+        }
+    }
+    DrawCircleV({body.x, body.y + 1.6f}, 2.6f, ink);   // abdomen
+    DrawCircleV({body.x, body.y - 1.4f}, 1.6f, ink);   // head
+    DrawCircleV({body.x - 0.8f, body.y + 1.0f}, 0.6f, Color{120, 20, 30, (unsigned char)(200 * alpha)});
 }

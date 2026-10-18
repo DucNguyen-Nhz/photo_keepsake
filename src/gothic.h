@@ -21,6 +21,8 @@ float CandleFlicker(float time, float seed);   // roughly -1..1
 void DrawCandleFlame(Vector2 wick, float scale, float time, float seed, float strength);
 void DrawBatShape(Vector2 c, float span, float flap, Color col);
 void DrawRose(Vector2 c, float r, Color petal);
+// Little spider dangling on a thread from `anchor`.
+void DrawSpider(Vector2 anchor, float time, float alpha);
 
 class Petals {
 public:

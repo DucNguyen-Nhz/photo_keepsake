@@ -39,6 +39,17 @@ void Dust::Burst(Vector2 from, Vector2 to, int count) {
     }
 }
 
+void Dust::Motes(Rectangle area, int count) {
+    for (int i = 0; i < count; i++) {
+        Particle p;
+        p.pos = {Frand(area.x, area.x + area.width), Frand(area.y, area.y + area.height)};
+        p.vel = {Frand(-5.0f, 5.0f), Frand(-14.0f, -4.0f)};
+        p.maxLife = p.life = Frand(2.5f, 5.0f);
+        p.size = Frand(0.5f, 1.2f);
+        parts_.push_back(p);
+    }
+}
+
 void Dust::Update(float dt) {
     for (auto& p : parts_) {
         p.life -= dt;
@@ -57,6 +68,7 @@ void Dust::Draw() const {
     for (const auto& p : parts_) {
         float f = p.life / p.maxLife;
         float a = std::sin(f * PI) * 0.8f;   // fade in and out
+        DrawCircleV(p.pos, p.size * 2.8f, Color{255, 220, 170, (unsigned char)(a * 40)});   // glints in the light
         DrawCircleV(p.pos, p.size, Color{235, 220, 185, (unsigned char)(a * 255)});
     }
 }
