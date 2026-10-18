@@ -47,16 +47,27 @@ void main() {
     vec3 c = texture(texture0, fragTexCoord).rgb;
 
     float l = dot(c, vec3(0.299, 0.587, 0.114));
-    if (style > 0.5) {
-        vec3 g = mix(vec3(l), c, 0.22) * vec3(0.90, 0.94, 1.04);              // drained, cold
-        g = mix(g, g * vec3(1.18, 0.82, 0.80), smoothstep(0.45, 1.0, l) * 0.45); // crimson highlights
-        g = mix(vec3(0.05, 0.04, 0.06), g, 0.92);
-        float v = 1.0 - smoothstep(0.25, 0.85, length((uv - 0.5) * vec2(1.0, 1.15)));
-        g *= mix(1.0, 0.35 + 0.65 * v, aging);
-        vec2 px = uv * size;
-        g += (hash(floor(px) + o) - 0.5) * 0.06 * aging;
+    if (style > 1.5) {   // romantic oil painting: warm, glowing, inside an oval
+        vec3 g = mix(vec3(l), c, 0.85) * vec3(1.06, 0.95, 0.86);
+        g += smoothstep(0.55, 1.0, l) * vec3(0.10, 0.05, 0.02);           // soft bloom
+        float v = 1.0 - smoothstep(0.35, 1.0, length((uv - vec2(0.5, 0.42)) * vec2(1.6, 1.25)));
+        g *= 0.35 + 0.65 * v;
+        float cr = 1.0 - smoothstep(0.0, 0.025, cracks(uv * vec2(18.0, 22.0) + o));
+        g *= 1.0 - cr * 0.15;
+        float mask = 1.0 - smoothstep(0.97, 1.0, length((uv - 0.5) * 2.0));
+        finalColor = vec4(clamp(g, 0.0, 1.0), mask) * fragColor;
+        return;
+    }
+    if (style > 0.5) {   // candlelit keepsake: rose-sepia, warm vignette
+        vec3 g = mix(vec3(l), c, 0.35);
+        g = g * vec3(1.10, 0.90, 0.84) + vec3(0.03, 0.0, 0.01);
+        g = mix(g, g * vec3(1.12, 0.86, 0.88), smoothstep(0.4, 1.0, l) * 0.35);  // rose highlights
+        g = mix(vec3(0.10, 0.04, 0.05), g, 0.9);
+        float v = 1.0 - smoothstep(0.3, 0.9, length((uv - 0.5) * vec2(1.0, 1.15)));
+        g *= mix(1.0, 0.45 + 0.55 * v, aging);
+        g += (hash(floor(uv * size) + o) - 0.5) * 0.05 * aging;
         float cr = 1.0 - smoothstep(0.0, 0.03, cracks(uv * vec2(22.0, 16.0) + o));
-        g *= 1.0 - cr * 0.22 * aging;
+        g *= 1.0 - cr * 0.12 * aging;
         finalColor = vec4(clamp(g, 0.0, 1.0), 1.0) * fragColor;
         return;
     }

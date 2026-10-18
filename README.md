@@ -11,13 +11,13 @@ the handwritten note on the back.
 
 Two themes (pick one in `wallet.ini`, see below):
 
-| `theme=dracula` (default)                                     | `theme=wallet`                                  |
+| `theme=dracula` (default): romantic gothic                     | `theme=wallet`                                  |
 |---------------------------------------------------------------|-------------------------------------------------|
-| Dracula's grimoire: crimson leather, gold tooling, bat emblem | Worn leather wartime wallet                     |
-| Opens on a castle under a full moon; bats fly out             | Dust drifts out as it opens                     |
-| Photos hang in gilded frames on iron chains, each lit by a flickering candle | Photos in a plastic accordion insert |
-| Cold oil-portrait grade with fine craquelure                  | Sepia print with a fold crease                  |
-| Notes on parchment pinned to the frame back, red ink, wax seal | Notes handwritten on the back of the print     |
+| Dracula's love-letter book: burgundy leather, gold tooling, rose and bat-wing emblem | Worn leather wartime wallet |
+| Opens on Hayez's *The Kiss* in an oval gilt frame; a love letter and pressed rose on the page | Dust drifts out as it opens |
+| Photos hang in gilded frames on chains, each lit by a flickering candle | Photos in a plastic accordion insert |
+| Warm rose-sepia candlelit grade; rose petals drift down         | Sepia print with a fold crease                  |
+| Notes on parchment pinned to the frame back, red ink, rose wax seal | Notes handwritten on the back of the print |
 
 Written in C++17 with [raylib](https://www.raylib.com/) 5.5.
 
@@ -164,9 +164,11 @@ src/                    C++ sources (window, animation, wallet, photos, notes)
 src/gothic.cpp          Dracula theme: grimoire, gilded frames, candles, bats
 assets/shaders/         leather, paper, aged-photo, gloss and gilt shaders
 assets/fonts/           Patrick Hand, Grenze Gotisch, Cormorant Garamond (all SIL OFL)
+assets/gothic/          The Kiss (Hayez, 1859, public domain) for the dracula theme
 assets/samples/         sample photos and notes
 ```
 
-Credits: sample photos from Unsplash via picsum.photos. Fonts under the SIL Open Font License:
+Credits: sample photos from Unsplash via picsum.photos. *Il bacio* (The Kiss) by Francesco Hayez,
+1859, public domain (Wikimedia Commons). Fonts under the SIL Open Font License:
 Patrick Hand (Patrick Wagesreiter), Grenze Gotisch (Omnibus-Type), Cormorant Garamond
 (Christian Thalmann); licence texts in `assets/fonts/`.

@@ -97,6 +97,8 @@ private:
     float time_ = 0.0f;
     Dust dust_;
     Bats bats_;
+    Petals petals_;
+    float petalTimer_ = 0.0f;
     bool dustDone_ = false;
 
     bool pressing_ = false, dragging_ = false;
@@ -174,7 +176,7 @@ bool App::Init(int argc, char** argv) {
                                     : fonts + "PatrickHand-Regular.ttf";
     font_ = LoadFontFor(content_, notePath, ownFont_);
     titleFont_ = gothic ? LoadFontFor(content_, fonts + "GrenzeGotisch.ttf", ownTitle_) : font_;
-    wallet_ = BakeWallet(content_.cfg, titleFont_);
+    wallet_ = BakeWallet(content_.cfg, titleFont_, font_);
     if (!gothic) gloss_ = BakeGloss();
     sleeves_.resize(n);
     for (int i = 0; i < n; i++)
@@ -407,7 +409,8 @@ void App::Update(float dt) {
         s.flip.Update(dt);
     }
     if (wantOpen_ && !dustDone_ && cover_.x > 0.3f && theme_ == Theme::Dracula) {
-        bats_.Burst({PanelX0(side_) + L::kWalletW * 0.5f, L::kTop + L::kWalletH * 0.4f}, 7);
+        bats_.Burst({PanelX0(side_) + L::kWalletW * 0.5f, L::kTop + L::kWalletH * 0.4f}, 3);
+        petals_.Burst({L::kHingeX - 60, L::kTop + 20}, {L::kHingeX + 60, L::kTop + L::kWalletH - 20}, 22);
         dustDone_ = true;
     }
     if (wantOpen_ && !dustDone_ && cover_.x > 0.3f) {
@@ -420,6 +423,13 @@ void App::Update(float dt) {
     if (!wantOpen_ && cover_.x < 0.05f) dustDone_ = false;
     dust_.Update(dt);
     bats_.Update(dt);
+    petals_.Update(dt);
+    // while open, a petal now and then drifts down past the frames
+    if (theme_ == Theme::Dracula && wantOpen_ && cover_.x > 0.9f && (petalTimer_ -= dt) <= 0.0f) {
+        float x0 = PanelX0(side_);
+        petals_.Burst({x0 + 10, L::kTop + L::kWalletH}, {x0 + L::kWalletW - 10, L::kTop + L::kWalletH}, 1);
+        petalTimer_ = Frand(0.8f, 2.0f);
+    }
 }
 
 void App::Draw() {
@@ -465,6 +475,7 @@ void App::Draw() {
 
     BeginStraightBlend();
     dust_.Draw();
+    petals_.Draw();
     bats_.Draw();
     rlDrawRenderBatchActive();
     rlPopMatrix();

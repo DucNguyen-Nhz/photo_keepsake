@@ -160,8 +160,9 @@ void FillPaper(Rectangle r, float seed, Vector3 base, float radius, float wear, 
     FillShaderRect(sh, r);
 }
 
-void FillGilt(Rectangle r, float border, float seed) {
+void FillGilt(Rectangle r, float border, float seed, bool oval) {
     Shader sh = GetShader(ShaderId::Gilt);
+    SetUniform(sh, "oval", oval ? 1.0f : 0.0f);
     SetUniform(sh, "border", border * L::kBakeScale);
     SetUniform(sh, "seed", seed);
     FillShaderRect(sh, r);

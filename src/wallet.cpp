@@ -115,10 +115,10 @@ Quad PanelQuad(int side) {
 }
 }  // namespace
 
-WalletArt BakeWallet(const Config& cfg, const Font& font) {
+WalletArt BakeWallet(const Config& cfg, const Font& font, const Font& script) {
     WalletArt art;
     if (cfg.theme == Theme::Dracula) {
-        TomeArt t = BakeTome(cfg, font);
+        TomeArt t = BakeTome(cfg, font, script);
         return {t.cover, t.endpaper, t.page};
     }
     art.outer = BakeOuter(cfg, font);

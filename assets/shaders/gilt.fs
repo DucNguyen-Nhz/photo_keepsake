@@ -24,6 +24,7 @@ float sdRoundBox(vec2 p, vec2 b, float r) {
 uniform vec2 size;
 uniform float border;
 uniform float seed;
+uniform float oval;       // 1: elliptical frame inscribed in the quad
 
 float g2(float x) { return exp(-x * x); }
 // moulding height across the frame: outer bead, cove, raised ridge, inner bead
@@ -36,15 +37,22 @@ void main() {
     vec2 p = fragTexCoord * size;
     float dl = p.x, dr = size.x - p.x, dt = p.y, db = size.y - p.y;
     float d = min(min(dl, dr), min(dt, db));
-    float alpha = clamp(border - d + 0.5, 0.0, 1.0) * clamp(d + 0.5, 0.0, 1.0);
-    float t = clamp(d / border, 0.0, 1.0);
-
     vec2 inward;
     float along;
-    if (d == dl)      { inward = vec2(1.0, 0.0);  along = p.y; }
+    if (oval > 0.5) {
+        vec2 hs = size * 0.5;
+        vec2 q = (p - hs) / hs;
+        float r = length(q);
+        d = (1.0 - r) * min(hs.x, hs.y);                      // approx. distance to the rim
+        inward = -normalize(q / hs + 1e-5);
+        along = atan(q.y, q.x) * min(hs.x, hs.y);
+    }
+    else if (d == dl) { inward = vec2(1.0, 0.0);  along = p.y; }
     else if (d == dr) { inward = vec2(-1.0, 0.0); along = p.y; }
     else if (d == dt) { inward = vec2(0.0, 1.0);  along = p.x; }
     else              { inward = vec2(0.0, -1.0); along = p.x; }
+    float alpha = clamp(border - d + 0.5, 0.0, 1.0) * clamp(d + 0.5, 0.0, 1.0);
+    float t = clamp(d / border, 0.0, 1.0);
 
     float dh = (prof(t + 0.01) - prof(t - 0.01)) / 0.02;
     // carved ornament: beads on the inner bead, leaf notches on the ridge

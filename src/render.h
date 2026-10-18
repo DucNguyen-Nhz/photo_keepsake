@@ -46,7 +46,7 @@ void FillShaderRect(Shader sh, Rectangle r);
 void FillLeather(Rectangle r, float seed, Vector3 base, float radius, float wear);
 void FillPaper(Rectangle r, float seed, Vector3 base, float radius, float wear, float rough = 1.5f);
 // Gilded moulding of width `border` around the edge of `r`.
-void FillGilt(Rectangle r, float border, float seed);
+void FillGilt(Rectangle r, float border, float seed, bool oval = false);
 // Photo cropped to fill `dst`; style 0 = sepia keepsake, 1 = cold gothic oil portrait.
 void DrawAgedPhoto(Texture2D img, Rectangle dst, float seed, float aging, float style);
 

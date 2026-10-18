@@ -2,6 +2,7 @@
 #include "anim.h"
 #include "layout.h"
 #include "note.h"
+#include "content.h"
 #include "render.h"
 #include "wallet.h"
 #include <algorithm>
@@ -26,7 +27,7 @@ struct Rng {
     float Range(float lo, float hi) { return lo + (hi - lo) * Next(); }
 };
 
-Vector3 Leather() { return {0.20f, 0.042f, 0.052f}; }
+Vector3 Leather() { return {0.29f, 0.045f, 0.085f}; }   // burgundy
 
 void CenterText(const Font& f, const char* t, float cx, float y, float size, Color c) {
     Vector2 m = MeasureTextEx(f, t, size, 1.0f);
@@ -86,12 +87,15 @@ RenderTexture2D BakeCover(const Config& cfg, const Font& title) {
     DrawRectangleLinesEx({r.x + 13, r.y + 13, r.width - 26, r.height - 26}, 0.7f, kGoldDim);
     CornerGuards(r);
 
-    Vector2 c = {r.x + TW * 0.5f, r.y + TH * 0.38f};
-    DrawBatShape({c.x + 1.0f, c.y + 1.2f}, 86.0f, 0.25f, Color{8, 2, 4, 200});
-    DrawBatShape(c, 86.0f, 0.25f, kGold);
-    DrawBatShape({c.x, c.y + 1.0f}, 80.0f, 0.25f, Color{120, 26, 30, 255});
+    Vector2 c = {r.x + TW * 0.5f, r.y + TH * 0.36f};
+    DrawBatShape({c.x + 1.0f, c.y + 1.2f}, 96.0f, 0.15f, Color{8, 2, 4, 200});
+    DrawBatShape(c, 96.0f, 0.15f, kGoldDim);
+    DrawBatShape({c.x, c.y + 0.8f}, 90.0f, 0.15f, Color{70, 10, 22, 255});
+    DrawCircleV({c.x + 0.8f, c.y + 2.2f}, 12.0f, Color{8, 2, 4, 150});
+    DrawRose({c.x, c.y + 1.0f}, 11.0f, Color{170, 18, 40, 255});
     const char* name = cfg.initials.empty() ? "Dracula" : cfg.initials.c_str();
-    CenterText(title, name, c.x, r.y + TH * 0.62f, 30.0f, kGold);
+    CenterText(title, name, c.x, r.y + TH * 0.58f, 30.0f, kGold);
+    CenterText(title, "amor aeternus", c.x, r.y + TH * 0.78f, 13.0f, kGoldDim);
 
     // clasp on the free edge
     Rectangle clasp = {r.x + TW - 17, r.y + TH * 0.5f - 19, 15, 38};
@@ -106,39 +110,35 @@ RenderTexture2D BakeCover(const Config& cfg, const Font& title) {
     return rt;
 }
 
-void DrawCastle(Rectangle e) {
-    Color ink = {9, 5, 11, 255};
-    Color lit = {255, 186, 92, 230};
-    float gx = e.x + e.width * 0.30f, gy = e.y + e.height * 0.56f;   // cliff top
-    // cliff
-    DrawTriangle({e.x - 10, e.y + e.height}, {e.x + e.width * 0.7f, e.y + e.height}, {gx, gy}, ink);
-    DrawTriangle({e.x - 10, e.y + e.height}, {gx, gy}, {e.x + e.width * 0.7f, e.y + e.height}, ink);
-    DrawTriangle({e.x - 10, e.y + e.height}, {gx - 30, gy + 6}, {gx + 12, e.y + e.height}, ink);
-    DrawTriangle({e.x - 10, e.y + e.height}, {gx + 12, e.y + e.height}, {gx - 30, gy + 6}, ink);
-    DrawRectangleRec({e.x, e.y + e.height - 10, e.width, 10}, Color{12, 6, 12, 255});
-    // keep, towers, roofs
-    auto tower = [&](float x, float w, float h, float roof) {
-        DrawRectangleRec({x, gy - h, w, h + 8}, ink);
-        Vector2 a = {x - 2.5f, gy - h}, b = {x + w + 2.5f, gy - h}, t = {x + w * 0.5f, gy - h - roof};
-        DrawTriangle(a, b, t, ink);
-        DrawTriangle(a, t, b, ink);
-        DrawLineEx(t, {t.x, t.y - 6}, 0.8f, ink);
-    };
-    DrawRectangleRec({gx - 22, gy - 34, 44, 42}, ink);
-    for (int i = 0; i < 6; i++) DrawRectangleRec({gx - 22 + i * 8.0f, gy - 38, 4.5f, 5}, ink);
-    tower(gx - 34, 13, 58, 22);
-    tower(gx + 20, 11, 48, 18);
-    tower(gx - 4, 9, 70, 26);
-    DrawRectangleRec({gx + 30, gy - 22, 22, 28}, ink);
-    tower(gx + 46, 8, 34, 14);
-    // lit windows
-    Rectangle wins[] = {{gx - 30, gy - 44, 2.2f, 3.6f}, {gx - 2, gy - 58, 2.2f, 3.6f},
-                        {gx + 23, gy - 36, 2.2f, 3.6f}, {gx - 12, gy - 22, 2.2f, 3.2f},
-                        {gx + 8, gy - 18, 2.2f, 3.2f}, {gx + 36, gy - 12, 2.0f, 3.0f}};
-    for (auto& w : wins) {
-        DrawCircleGradient((int)(w.x + 1), (int)(w.y + 2), 5.0f, Color{255, 160, 70, 60}, Color{255, 160, 70, 0});
-        DrawRectangleRec(w, lit);
+void Damask(Rectangle e) {
+    DrawRectangleGradientV((int)e.x, (int)e.y, (int)e.width, (int)e.height, Color{58, 8, 20, 255},
+                           Color{34, 4, 12, 255});
+    for (float y = e.y + 6; y < e.y + e.height; y += 22)
+        for (float x = e.x + 6 + std::fmod(y, 44.0f) * 0.5f; x < e.x + e.width; x += 22) {
+            Color c = {92, 18, 36, 70};
+            DrawTriangle({x, y - 5}, {x - 3, y}, {x + 3, y}, c);   // little fleur
+            DrawTriangle({x, y - 5}, {x + 3, y}, {x - 3, y}, c);
+            DrawTriangle({x - 3, y}, {x, y + 5}, {x + 3, y}, c);
+            DrawTriangle({x - 3, y}, {x + 3, y}, {x, y + 5}, c);
+            DrawCircleV({x - 4, y - 3}, 1.0f, c);
+            DrawCircleV({x + 4, y - 3}, 1.0f, c);
+        }
+}
+
+// Rose stem with leaves from `a` to `b`, rose head at `b`.
+void RoseSprig(Vector2 a, Vector2 b, float r, Color petal) {
+    Color stem = {44, 70, 34, 255}, leaf = {56, 92, 42, 255};
+    DrawLineEx(a, b, 1.4f, stem);
+    Vector2 m = {a.x + (b.x - a.x) * 0.45f, a.y + (b.y - a.y) * 0.45f};
+    for (float s : {1.0f, -1.0f}) {
+        Vector2 tip = {m.x + s * r * 1.2f, m.y - r * 0.5f};
+        DrawTriangle(m, tip, {m.x + s * r * 0.5f, m.y + r * 0.35f}, leaf);
+        DrawTriangle(m, {m.x + s * r * 0.5f, m.y + r * 0.35f}, tip, leaf);
+        DrawTriangle(m, {m.x + s * r * 0.4f, m.y - r * 0.6f}, tip, leaf);
+        DrawTriangle(m, tip, {m.x + s * r * 0.4f, m.y - r * 0.6f}, leaf);
+        m = {a.x + (b.x - a.x) * 0.7f, a.y + (b.y - a.y) * 0.7f};
     }
+    DrawRose(b, r, petal);
 }
 
 RenderTexture2D BakeEndpaper(const Config& cfg) {
@@ -147,24 +147,27 @@ RenderTexture2D BakeEndpaper(const Config& cfg) {
     FillLeather(r, 23.9f, Leather(), 6.0f, 0.55f + 0.45f * cfg.aging);
     Rectangle e = {r.x + 8, r.y + 8, r.width - 16, r.height - 16};
     BeginBakeClip(e);
-    DrawRectangleGradientV((int)e.x, (int)e.y, (int)e.width, (int)e.height, Color{14, 10, 30, 255},
-                           Color{74, 18, 34, 255});
-    Rng rng{91u};
-    for (int i = 0; i < 46; i++)
-        DrawCircleV({rng.Range(e.x, e.x + e.width), rng.Range(e.y, e.y + e.height * 0.6f)},
-                    rng.Range(0.3f, 0.8f), Color{235, 225, 255, (unsigned char)rng.Range(60, 200)});
-    Vector2 moon = {e.x + e.width * 0.72f, e.y + e.height * 0.30f};
-    DrawCircleGradient((int)moon.x, (int)moon.y, 62.0f, Color{240, 220, 190, 70}, Color{240, 220, 190, 0});
-    DrawCircleV(moon, 21.0f, Color{238, 228, 204, 255});
-    DrawCircleV({moon.x - 6, moon.y - 4}, 4.0f, Color{214, 202, 178, 255});
-    DrawCircleV({moon.x + 7, moon.y + 5}, 5.5f, Color{220, 208, 184, 255});
-    DrawCircleV({moon.x + 2, moon.y - 10}, 2.5f, Color{216, 204, 180, 255});
-    DrawEllipse((int)(moon.x - 18), (int)(moon.y + 17), 34, 3.5f, Color{40, 20, 44, 110});
-    DrawEllipse((int)(moon.x + 30), (int)(moon.y + 11), 26, 3, Color{40, 20, 44, 90});
-    DrawCastle(e);
-    DrawBatShape({moon.x - 30, moon.y - 8}, 12.0f, 0.6f, Color{10, 5, 12, 255});
-    DrawBatShape({moon.x + 4, moon.y + 2}, 9.0f, -0.4f, Color{10, 5, 12, 255});
-    DrawBatShape({moon.x + 30, moon.y - 18}, 7.0f, 0.2f, Color{10, 5, 12, 255});
+    Damask(e);
+    // candle glow behind the painting
+    DrawCircleGradient((int)(e.x + e.width * 0.5f), (int)(e.y + e.height * 0.5f), 110.0f,
+                       Color{255, 140, 80, 40}, Color{255, 140, 80, 0});
+    float oh = e.height - 6, ow = oh * 0.76f;
+    Rectangle oval = {e.x + (e.width - ow) * 0.5f, e.y + 3, ow, oh};
+    DrawEllipse((int)(oval.x + ow * 0.5f + 1.5f), (int)(oval.y + oh * 0.5f + 2.5f), ow * 0.5f, oh * 0.5f,
+                Color{10, 0, 4, 150});
+    std::string path = AssetDir() + "gothic/the_kiss_hayez.jpg";
+    Texture2D img = FileExists(path.c_str()) ? LoadTexture(path.c_str()) : Texture2D{};
+    if (img.id != 0) {
+        GenTextureMipmaps(&img);
+        SetTextureFilter(img, TEXTURE_FILTER_TRILINEAR);
+        float b = 8.0f;
+        DrawAgedPhoto(img, {oval.x + b - 1, oval.y + b - 1, ow - 2 * b + 2, oh - 2 * b + 2}, 31.0f, cfg.aging, 2.0f);
+        UnloadTexture(img);
+    }
+    FillGilt(oval, 8.0f, 12.0f, true);
+    RoseSprig({oval.x - 26, e.y + e.height + 4}, {oval.x - 4, oval.y + oh - 14}, 7.0f, Color{160, 16, 36, 255});
+    RoseSprig({oval.x + ow + 26, e.y + e.height + 4}, {oval.x + ow + 4, oval.y + oh - 14}, 7.0f,
+              Color{160, 16, 36, 255});
     EndScissorMode();
     DrawRectangleLinesEx(e, 1.0f, kGoldDim);
     BakeEnd(rt);
@@ -177,18 +180,20 @@ Vector2 PageCandleBase() {   // in panel texture coordinates (1x, including padd
     return {P + TW - 34, P + TH * kPocketFrac - 6};
 }
 
-RenderTexture2D BakePage(const Config& cfg, const Font& title) {
+RenderTexture2D BakePage(const Config& cfg, const Font& title, const Font& script) {
     RenderTexture2D rt = BakeBegin(TW + 2 * P, TH + 2 * P);
     Rectangle r = {P, P, TW, TH};
     float wear = 0.55f + 0.45f * cfg.aging;
     FillLeather(r, 25.1f, Leather(), 6.0f, wear);
     Rectangle page = {r.x + 8, r.y + 8, r.width - 16, r.height - 16};
     FillPaper(page, 4.2f, {0.84f, 0.76f, 0.58f}, 1.0f, std::min(1.0f, wear * 1.1f), 1.0f);
-    DrawTextEx(title, "Ex Libris", {page.x + 12, page.y + 6}, 20.0f, 1.0f, Color{110, 20, 26, 210});
-    for (int i = 0; i < 3; i++) {
-        float y = page.y + 34 + i * 9.0f;
-        DrawLineEx({page.x + 12, y}, {page.x + page.width - 60, y}, 0.6f, Color{90, 60, 40, 45});
-    }
+    DrawTextEx(title, "My Mina,", {page.x + 12, page.y + 5}, 17.0f, 1.0f, Color{110, 16, 30, 220});
+    DrawTextPro(script, "Across oceans of time,", {page.x + 22, page.y + 26}, {0, 0}, -1.5f, 14.0f, 0,
+                Color{100, 14, 28, 220});
+    DrawTextPro(script, "I would find you.", {page.x + 34, page.y + 41}, {0, 0}, -1.5f, 14.0f, 0,
+                Color{100, 14, 28, 220});
+    RoseSprig({page.x + page.width - 92, page.y + 66}, {page.x + page.width - 62, page.y + 50}, 5.5f,
+              Color{120, 20, 34, 220});   // pressed, slightly faded
     Vector2 cb = PageCandleBase();
     DrawCandleStub(cb.x, cb.y, 10.0f, 30.0f, 7u);
 
@@ -281,14 +286,14 @@ RenderTexture2D BakeFrameBack(const Item& item, const Font& note, float aging, f
     DrawCircleV({seal.x + 0.6f, seal.y + 0.9f}, 10.5f, Color{40, 4, 6, 160});
     DrawCircleV(seal, 10.0f, Color{132, 14, 22, 255});
     DrawCircleV(seal, 7.0f, Color{112, 10, 18, 255});
-    DrawBatShape(seal, 11.0f, 0.2f, Color{80, 6, 12, 255});
+    DrawRose(seal, 4.6f, Color{96, 8, 16, 255});
     BakeEnd(rt);
     return rt;
 }
 }  // namespace
 
-TomeArt BakeTome(const Config& cfg, const Font& title) {
-    return {BakeCover(cfg, title), BakeEndpaper(cfg), BakePage(cfg, title)};
+TomeArt BakeTome(const Config& cfg, const Font& title, const Font& script) {
+    return {BakeCover(cfg, title), BakeEndpaper(cfg), BakePage(cfg, title, script)};
 }
 
 SleeveArt BakeFrame(const Item& item, const Font& note, float aging, int seed) {
@@ -391,5 +396,77 @@ void Bats::Draw() const {
     for (const auto& b : bats_) {
         float a = std::min(1.0f, b.life / 0.6f) * std::min(1.0f, (b.maxLife - b.life) / 0.15f);
         DrawBatShape(b.pos, b.span, std::sin(b.phase), Color{14, 8, 16, (unsigned char)(235 * a)});
+    }
+}
+
+void DrawRose(Vector2 c, float r, Color petal) {
+    auto shade = [&](float k) {
+        return Color{(unsigned char)(petal.r * k), (unsigned char)(petal.g * k), (unsigned char)(petal.b * k), petal.a};
+    };
+    for (int i = 0; i < 5; i++) {   // outer petals
+        float a = i * 72.0f * DEG2RAD - PI / 2;
+        Vector2 p = {c.x + std::cos(a) * r * 0.5f, c.y + std::sin(a) * r * 0.5f};
+        DrawCircleV(p, r * 0.55f, shade(0.62f));
+        DrawCircleV({p.x - std::cos(a) * r * 0.08f, p.y - std::sin(a) * r * 0.08f}, r * 0.45f, shade(0.85f));
+    }
+    for (int i = 0; i < 4; i++) {   // inner petals
+        float a = (i * 90.0f + 30.0f) * DEG2RAD;
+        DrawCircleV({c.x + std::cos(a) * r * 0.25f, c.y + std::sin(a) * r * 0.25f}, r * 0.36f, shade(1.0f));
+    }
+    DrawRing(c, r * 0.12f, r * 0.2f, 20, 300, 12, shade(0.55f));   // swirl
+    DrawRing(c, r * 0.28f, r * 0.34f, 200, 470, 12, shade(0.6f));
+    DrawCircleV(c, r * 0.12f, shade(0.5f));
+}
+
+void Petals::Burst(Vector2 from, Vector2 to, int count) {
+    for (int i = 0; i < count; i++) {
+        float t = Frand(0, 1);
+        Petal p;
+        p.pos = {from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t};
+        p.vel = {Frand(-30, 30), Frand(-25, 15)};
+        p.angle = Frand(0, 360);
+        p.spin = Frand(-90, 90);
+        p.flip = Frand(0, 6.28f);
+        p.flipRate = Frand(2, 5);
+        p.size = Frand(5.0f, 8.0f);
+        p.maxLife = p.life = Frand(3.5f, 6.0f);
+        petals_.push_back(p);
+    }
+}
+
+void Petals::Update(float dt) {
+    for (auto& p : petals_) {
+        p.life -= dt;
+        p.vel.y += (22.0f - p.vel.y) * 0.9f * dt;                 // drift down at terminal speed
+        p.vel.x += std::sin(p.flip * 0.7f) * 18.0f * dt;          // sway
+        p.vel.x *= 1.0f - 0.4f * dt;
+        p.pos.x += p.vel.x * dt;
+        p.pos.y += p.vel.y * dt;
+        p.angle += p.spin * dt;
+        p.flip += p.flipRate * dt;
+    }
+    petals_.erase(std::remove_if(petals_.begin(), petals_.end(), [](const Petal& p) { return p.life <= 0; }),
+                  petals_.end());
+}
+
+void Petals::Draw() const {
+    for (const auto& p : petals_) {
+        float a = std::min(1.0f, p.life / 1.0f) * std::min(1.0f, (p.maxLife - p.life) / 0.3f);
+        float w = p.size * (0.35f + 0.65f * std::fabs(std::cos(p.flip)));   // tumbling
+        float k = 0.75f + 0.25f * std::cos(p.flip);
+        Color c = {(unsigned char)(170 * k), (unsigned char)(16 * k), (unsigned char)(38 * k), (unsigned char)(230 * a)};
+        float ca = std::cos(p.angle * DEG2RAD), sa = std::sin(p.angle * DEG2RAD);
+        auto pt = [&](float x, float y) { return Vector2{p.pos.x + x * ca - y * sa, p.pos.y + x * sa + y * ca}; };
+        // teardrop petal from a fan of points
+        Vector2 pts[9];
+        pts[0] = pt(0, 0);
+        for (int i = 0; i < 8; i++) {
+            float t = i / 7.0f * PI;
+            float rr = p.size * (0.6f + 0.4f * std::sin(t));
+            pts[i + 1] = pt(std::cos(t) * w, -std::sin(t) * rr - p.size * 0.2f);
+        }
+        DrawTriangleFan(pts, 9, c);
+        DrawTriangle(pt(-w * 0.6f, -p.size * 0.15f), pt(0, p.size * 0.5f), pt(w * 0.6f, -p.size * 0.15f), c);
+        DrawTriangle(pt(-w * 0.6f, -p.size * 0.15f), pt(w * 0.6f, -p.size * 0.15f), pt(0, p.size * 0.5f), c);
     }
 }
