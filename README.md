@@ -1,0 +1,159 @@
+# Wallet Keepsake
+
+A small desktop widget: a worn leather wallet tucked against the edge of your screen. Click it and
+it slides in, opens, and a photo drops out of a plastic accordion insert, the way people carried
+pictures of loved ones in wartime. Scroll to unfold more photos; click one to turn it over and read
+the handwritten note on the back.
+
+- Fully transparent background, floats above other windows, no title bar.
+- Clicks on empty space go straight through to whatever is underneath.
+- Leather, paper and the aged-photo look are generated on the fly; your photos are untouched.
+
+Written in C++17 with [raylib](https://www.raylib.com/) 5.5.
+
+---
+
+## Install on macOS
+
+Requirements: macOS 11 or newer (Intel or Apple Silicon), an internet connection for the first build.
+
+```sh
+cd wallet_image
+./scripts/setup-macos.sh
+```
+
+The script:
+
+1. Installs the Xcode Command Line Tools if missing (a system dialog appears; run the script again
+   when it finishes).
+2. Installs CMake via [Homebrew](https://brew.sh) if missing.
+3. Builds **Wallet Keepsake.app** and installs it to `~/Applications`.
+4. Creates your photo folder and opens it in Finder, then launches the app.
+
+Options:
+
+| Command                                   | Does                                               |
+|-------------------------------------------|----------------------------------------------------|
+| `./scripts/setup-macos.sh --autostart`    | Also start the wallet automatically when you log in |
+| `./scripts/setup-macos.sh --no-open`      | Install without launching                          |
+| `./scripts/setup-macos.sh --uninstall`    | Remove the app and login item (keeps your photos)  |
+
+Run the script again any time to rebuild after pulling changes.
+
+The app has no Dock icon or menu bar (it's a widget). Open it from `~/Applications` or Spotlight
+("Wallet Keepsake"); quit it from its right-click menu or with **Cmd+Q** while it's focused.
+
+---
+
+## Add your photos
+
+Put photos in this folder (the setup script creates it and opens it for you):
+
+| OS      | Folder                                                  |
+|---------|---------------------------------------------------------|
+| macOS   | `~/Library/Application Support/wallet_image/items/`     |
+| Linux   | `~/.config/wallet_image/items/`                         |
+| Windows | `%APPDATA%\wallet_image\items\`                         |
+
+On macOS, `Library` is hidden in Finder: use **Go → Go to Folder…** (Shift+Cmd+G) and paste the path.
+
+- Every `.jpg` / `.png` is one photo, ordered by file name, so number them: `01_…`, `02_…`.
+- The note on a photo's back is a `.txt` file with the **same name**:
+
+```
+items/
+  01_mom.jpg
+  01_mom.txt      ← written on the back of 01_mom.jpg
+  02_home.png     ← no .txt: blank back
+  wallet.ini      ← optional settings (below)
+```
+
+Notes are plain UTF-8 text. Line breaks are kept and long notes shrink to fit; accented and
+Vietnamese characters work. Photos are cropped to a landscape frame (portraits keep the top part).
+
+**Restart the app after changing photos** (they're loaded at start).
+
+If the folder is empty, the wallet shows three sample photos.
+
+### Settings: `wallet.ini`
+
+Optional, in the same folder:
+
+```ini
+initials=E. M.     # pressed into the leather cover
+aging=0.9          # 0 = fresh print, 1 = very worn
+font=myhand.ttf    # your own handwriting font (.ttf, placed in the same folder)
+```
+
+---
+
+## Using it
+
+The wallet docks to the side of the screen; only a strip of leather peeks out.
+
+| Action                          | Result                                           |
+|---------------------------------|--------------------------------------------------|
+| Click the peeking strip         | Wallet slides in and opens                       |
+| Scroll down (or ↓)              | Next photo drops out of the insert               |
+| Scroll up (or ↑)                | Folds the last photo back up                     |
+| Click a photo                   | Turns it over to read the note                   |
+| Click the open wallet           | Photos fold back, it closes and slides away      |
+| Drag up/down while docked       | Moves it along the edge                          |
+| Drag away from the edge         | Undocks it so it floats anywhere                 |
+| Drop it near a screen edge      | Docks to that edge (left or right)               |
+| Right-click                     | Menu: keep on top, open/close, quit              |
+| Esc / Space                     | Close / toggle                                   |
+| Cmd+Q (macOS), Ctrl+Q           | Quit                                             |
+
+Its position and dock edge are remembered between runs. With many photos, the wallet unfolds as
+far as your screen height allows.
+
+---
+
+## Build on Linux / Windows
+
+Needs CMake 3.20+, a C++17 compiler and git. CMake downloads raylib automatically.
+
+```sh
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+./build/wallet_image                 # Windows: build\Release\wallet_image.exe
+```
+
+- **Linux** needs the X11/GL dev packages:
+  `sudo apt install build-essential cmake git libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev`.
+  Transparency needs a compositor (default on GNOME/KDE). On Wayland it runs through XWayland.
+- Keep the `assets/` folder next to the executable when moving it.
+
+Command-line options (all platforms): a folder path to load photos from instead of the default,
+`--open N` to start with N photos hanging, `--flip I` to start with photo I turned over.
+
+---
+
+## Troubleshooting
+
+- **macOS: "Wallet Keepsake can't be opened"** — this happens if you received a pre-built app
+  instead of building it. Build it with the setup script, or run
+  `xattr -dr com.apple.quarantine ~/Applications/Wallet\ Keepsake.app`.
+- **Can't find the wallet** — it's tucked against the right edge of the screen it was last on.
+  Delete `state.ini` in the settings folder (one level above `items/`) to reset its position.
+- **Scrolling goes the wrong way** — the up/down arrow keys work too. With macOS natural scrolling,
+  swipe up to drop the next photo.
+- **Photos don't change** — restart the app; it reads the folder at start.
+
+---
+
+## Project layout
+
+```
+CMakeLists.txt          build (fetches raylib 5.5; makes a .app on macOS)
+cmake/Info.plist.in     macOS bundle info (no Dock icon)
+scripts/setup-macos.sh  macOS build + install
+src/                    C++ sources (window, animation, wallet, photos, notes)
+assets/shaders/         leather, paper, aged-photo and gloss shaders
+assets/fonts/           Patrick Hand handwriting font (SIL OFL, see OFL.txt)
+assets/samples/         sample photos and notes
+```
+
+Credits: sample photos from Unsplash via picsum.photos; handwriting font Patrick Hand by Patrick
+Wagesreiter (SIL Open Font License).
